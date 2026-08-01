@@ -1,5 +1,5 @@
 import React, { useState } from "react"
-import { Link, useNavigate } from "react-router-dom"
+import { useNavigate } from "react-router-dom"
 import {
   FolderPlus,
   CheckCircle2,
@@ -18,7 +18,6 @@ import { Input } from "@/components/ui/input"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { StatsCard } from "@/components/dashboard/StatsCard"
 import { ProjectCard } from "@/components/dashboard/ProjectCard"
-import { TaskCard } from "@/components/dashboard/TaskCard"
 import { PermissionButton } from "@/components/common/PermissionButton"
 import { EmptyState } from "@/components/common/EmptyState"
 
@@ -53,42 +52,6 @@ export function Dashboard() {
     p.category.toLowerCase().includes(searchQuery.toLowerCase())
   )
 
-  // Mock recent tasks associated with user projects
-  const mockTasks = [
-    {
-      id: "t-1",
-      name: "Setup Authentication Middleware & JWT",
-      projectKey: projects[0]?.key || "PFW",
-      status: "In Progress",
-      priority: "High",
-      dueDate: "Tomorrow",
-    },
-    {
-      id: "t-2",
-      name: "Design System UI Components & Tokens",
-      projectKey: projects[0]?.key || "PFW",
-      status: "Completed",
-      priority: "Medium",
-      dueDate: "Aug 4, 2026",
-    },
-    {
-      id: "t-3",
-      name: "Database Schema Migration & Indexes",
-      projectKey: projects[1]?.key || "MAR",
-      status: "Todo",
-      priority: "High",
-      dueDate: "Aug 6, 2026",
-    },
-    {
-      id: "t-4",
-      name: "Mobile Responsive Layout Polish",
-      projectKey: projects[1]?.key || "MAR",
-      status: "In Progress",
-      priority: "Medium",
-      dueDate: "Aug 8, 2026",
-    },
-  ]
-
   const handleLogout = () => {
     logoutUser()
     navigate("/")
@@ -106,15 +69,15 @@ export function Dashboard() {
             {greetingText}
           </h1>
           <p className="text-xs sm:text-sm text-muted-foreground">
-            Here's what is happening with your projects and tasks today.
+            Here's what is happening with your workspace and projects today.
           </p>
         </div>
 
-        {/* Right Header Controls: Search, Notification, Profile Avatar */}
-        <div className="flex items-center gap-3">
+        {/* Right Header Controls: Search, New Project CTA, Notification, Profile Avatar */}
+        <div className="flex flex-wrap items-center gap-3">
           
           {/* Search Bar */}
-          <div className="relative w-full sm:w-64">
+          <div className="relative w-full sm:w-60">
             <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
             <Input
               type="text"
@@ -125,13 +88,25 @@ export function Dashboard() {
             />
           </div>
 
+          {/* Primary Modern New Project Button */}
+          <PermissionButton
+            action="create"
+            resource="project"
+            size="sm"
+            onClick={() => navigate("/projects/create")}
+            className="h-9 px-4 font-semibold shadow-xs hover:shadow-md transition-all gap-1.5 bg-primary text-primary-foreground hover:bg-primary/90 rounded-lg"
+          >
+            <Plus className="h-4 w-4 stroke-[2.5]" />
+            <span>New Project</span>
+          </PermissionButton>
+
           {/* Notifications Button */}
           <button
             type="button"
-            className="relative p-2 rounded-lg border border-border/80 bg-card hover:bg-accent text-foreground transition-colors"
+            className="relative p-2 rounded-lg border border-border/80 bg-card hover:bg-accent text-foreground transition-colors h-9 w-9 flex items-center justify-center"
             title="Notifications"
           >
-            <Bell className="h-4.5 w-4.5" />
+            <Bell className="h-4 w-4" />
             <span className="absolute top-1.5 right-1.5 h-2 w-2 rounded-full bg-primary" />
           </button>
 
@@ -140,7 +115,7 @@ export function Dashboard() {
             <button
               type="button"
               onClick={() => setShowProfileMenu(!showProfileMenu)}
-              className="flex items-center gap-2 p-1 rounded-full hover:ring-2 hover:ring-primary/20 transition-all focus:outline-none"
+              className="flex items-center gap-2 p-0.5 rounded-full hover:ring-2 hover:ring-primary/20 transition-all focus:outline-none"
             >
               <Avatar className="h-9 w-9 border border-primary/20">
                 <AvatarFallback className="bg-primary text-primary-foreground font-bold">
@@ -201,7 +176,7 @@ export function Dashboard() {
           icon={ListTodo}
           title="Total Tasks"
           count={totalTasks}
-          trend={totalTasks > 0 ? "Across all boards" : undefined}
+          trend={totalTasks > 0 ? "Across all projects" : undefined}
           iconColor="bg-indigo-500/10 text-indigo-600"
         />
         <StatsCard
@@ -220,58 +195,46 @@ export function Dashboard() {
         />
       </div>
 
-      {/* Main Content Area */}
+      {/* Main Content Area: Recent Projects */}
       {totalProjects > 0 ? (
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-          
-          {/* Left Section: Recent Projects (~70% desktop width) */}
-          <div className="lg:col-span-7 space-y-4">
-            <div className="flex items-center justify-between">
-              <div className="space-y-0.5">
-                <h2 className="text-xl font-bold tracking-tight text-foreground">Recent Projects</h2>
-                <p className="text-xs text-muted-foreground">Latest workspace projects you are managing</p>
-              </div>
-              <PermissionButton
-                action="create"
-                resource="project"
-                size="sm"
-                onClick={() => navigate("/projects/create")}
-                className="gap-1.5 text-xs font-semibold shadow-xs"
-              >
-                <Plus className="h-3.5 w-3.5" /> New Project
-              </PermissionButton>
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <div className="space-y-0.5">
+              <h2 className="text-xl font-bold tracking-tight text-foreground">Recent Projects</h2>
+              <p className="text-xs text-muted-foreground">Workspace projects you are managing</p>
             </div>
+            <span className="text-xs font-semibold text-muted-foreground">
+              Showing {filteredProjects.length} project(s)
+            </span>
+          </div>
 
-            <div className={`grid gap-4 ${filteredProjects.length === 1 ? "grid-cols-1" : "grid-cols-1 sm:grid-cols-2"}`}>
-              {filteredProjects.length > 0 ? (
-                filteredProjects.map((proj) => (
+          {/* Projects Grid with Add Project Tile */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            {filteredProjects.length > 0 ? (
+              <>
+                {filteredProjects.map((proj) => (
                   <ProjectCard key={proj.id} project={proj} />
-                ))
-              ) : (
-                <div className="col-span-full py-8 text-center text-xs text-muted-foreground border border-dashed rounded-xl">
-                  No projects match your search criteria.
-                </div>
-              )}
-            </div>
-          </div>
+                ))}
 
-          {/* Right Section: Recent Tasks (~30% desktop width) */}
-          <div className="lg:col-span-5 space-y-4">
-            <div className="flex items-center justify-between">
-              <div className="space-y-0.5">
-                <h2 className="text-xl font-bold tracking-tight text-foreground">Recent Tasks</h2>
-                <p className="text-xs text-muted-foreground">High priority & active issue tickets</p>
+                {/* Modern Add New Project Card Tile */}
+                <button
+                  type="button"
+                  onClick={() => navigate("/projects/create")}
+                  className="border border-dashed border-border/80 hover:border-primary/60 bg-card/40 hover:bg-primary/5 rounded-xl p-6 flex flex-col items-center justify-center space-y-2 text-center transition-all group min-h-[190px]"
+                >
+                  <div className="h-10 w-10 rounded-full bg-primary/10 text-primary flex items-center justify-center group-hover:scale-110 transition-transform shadow-xs">
+                    <Plus className="h-5 w-5 stroke-[2.5]" />
+                  </div>
+                  <p className="text-sm font-bold text-foreground group-hover:text-primary transition-colors">Create New Project</p>
+                  <p className="text-xs text-muted-foreground">Add a new workspace to organize tasks</p>
+                </button>
+              </>
+            ) : (
+              <div className="col-span-full py-12 text-center text-xs text-muted-foreground border border-dashed rounded-xl">
+                No projects match your search criteria.
               </div>
-              <span className="text-xs font-semibold text-primary cursor-pointer hover:underline">View All</span>
-            </div>
-
-            <div className="space-y-3">
-              {mockTasks.map((task) => (
-                <TaskCard key={task.id} task={task} />
-              ))}
-            </div>
+            )}
           </div>
-
         </div>
       ) : (
         /* Empty State */
