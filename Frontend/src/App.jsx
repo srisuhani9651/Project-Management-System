@@ -12,6 +12,7 @@ import CreateProject from "@/pages/CreateProject"
 import ProjectDetails from "@/pages/ProjectDetails"
 import Projects from "@/pages/Projects"
 import TaskDetails from "@/pages/TaskDetails"
+import Profile from "@/pages/Profile"
 
 function AppContent() {
   const { user } = useProject()
@@ -120,6 +121,14 @@ function AppContent() {
           element={
             <AppLayout>
               <TaskDetails />
+            </AppLayout>
+          }
+        />
+        <Route
+          path="/profile"
+          element={
+            <AppLayout>
+              <Profile />
             </AppLayout>
           }
         />

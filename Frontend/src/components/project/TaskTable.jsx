@@ -14,6 +14,7 @@ import { AlertDialog } from "@/components/ui/alert-dialog"
 import { PriorityBadge } from "@/components/common/PriorityBadge"
 import { PermissionButton } from "@/components/common/PermissionButton"
 import { EmptyState } from "@/components/common/EmptyState"
+import { EditTaskModal } from "@/components/project/EditTaskModal"
 
 export function TaskTable({ tasks = [], onDeleteTask, onUpdateTaskStatus, onCreateTask }) {
   const navigate = useNavigate()
@@ -21,6 +22,7 @@ export function TaskTable({ tasks = [], onDeleteTask, onUpdateTaskStatus, onCrea
   const [statusFilter, setStatusFilter] = useState("All")
   const [priorityFilter, setPriorityFilter] = useState("All")
   const [taskToDelete, setTaskToDelete] = useState(null)
+  const [taskToEdit, setTaskToEdit] = useState(null)
 
   // Filter tasks based on search, status, and priority
   const filteredTasks = tasks.filter((task) => {
@@ -181,7 +183,7 @@ export function TaskTable({ tasks = [], onDeleteTask, onUpdateTaskStatus, onCrea
                       resourceData={task}
                       variant="ghost"
                       size="icon"
-                      onClick={() => navigate(`/tasks/${task.id}`)}
+                      onClick={() => setTaskToEdit(task)}
                       className="h-8 w-8 text-muted-foreground hover:text-foreground"
                       title="Edit Task"
                     >
@@ -225,6 +227,17 @@ export function TaskTable({ tasks = [], onDeleteTask, onUpdateTaskStatus, onCrea
           }
         />
       )}
+
+      {/* Edit Task Modal */}
+      <EditTaskModal
+        open={!!taskToEdit}
+        onOpenChange={(open) => !open && setTaskToEdit(null)}
+        task={taskToEdit}
+        onSaveTask={(updated) => {
+          onUpdateTaskStatus(updated.id, updated.status)
+          setTaskToEdit(null)
+        }}
+      />
 
       {/* Delete Confirmation Alert Dialog */}
       <AlertDialog

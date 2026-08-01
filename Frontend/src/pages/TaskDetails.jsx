@@ -15,11 +15,13 @@ import { PriorityBadge } from "@/components/common/PriorityBadge"
 import { StatusBadge } from "@/components/common/StatusBadge"
 import { PermissionButton } from "@/components/common/PermissionButton"
 import { AlertDialog } from "@/components/ui/alert-dialog"
+import { EditTaskModal } from "@/components/project/EditTaskModal"
 
 export function TaskDetails() {
   const { taskId } = useParams()
   const navigate = useNavigate()
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
+  const [showEditModal, setShowEditModal] = useState(false)
 
   // Mock task state initialized with realistic data
   const [task, setTask] = useState({
@@ -50,6 +52,10 @@ export function TaskDetails() {
 
   const handleDeleteTask = () => {
     navigate(-1)
+  }
+
+  const handleSaveTask = (updatedTask) => {
+    setTask(updatedTask)
   }
 
   const getInitials = (name) => {
@@ -110,6 +116,7 @@ export function TaskDetails() {
                 resourceData={task}
                 variant="outline"
                 size="sm"
+                onClick={() => setShowEditModal(true)}
                 className="gap-1.5 font-medium"
               >
                 <Edit3 className="h-4 w-4" /> Edit Task
@@ -242,6 +249,14 @@ export function TaskDetails() {
 
         </CardContent>
       </Card>
+
+      {/* Edit Task Modal */}
+      <EditTaskModal
+        open={showEditModal}
+        onOpenChange={setShowEditModal}
+        task={task}
+        onSaveTask={handleSaveTask}
+      />
 
       {/* Delete Confirmation Alert Dialog */}
       <AlertDialog

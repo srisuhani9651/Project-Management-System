@@ -9,7 +9,6 @@ import {
   Building2,
   Activity,
   Search,
-  Bell,
   LogOut,
   User,
   ArrowRight
@@ -21,6 +20,7 @@ import { StatsCard } from "@/components/dashboard/StatsCard"
 import { ProjectCard } from "@/components/dashboard/ProjectCard"
 import { PermissionButton } from "@/components/common/PermissionButton"
 import { EmptyState } from "@/components/common/EmptyState"
+import { NotificationDropdown } from "@/components/layout/NotificationDropdown"
 
 export function Dashboard() {
   const navigate = useNavigate()
@@ -104,15 +104,8 @@ export function Dashboard() {
             <span>New Project</span>
           </PermissionButton>
 
-          {/* Notifications Button */}
-          <button
-            type="button"
-            className="relative p-2 rounded-lg border border-border/80 bg-card hover:bg-accent text-foreground transition-colors h-9 w-9 flex items-center justify-center"
-            title="Notifications"
-          >
-            <Bell className="h-4 w-4" />
-            <span className="absolute top-1.5 right-1.5 h-2 w-2 rounded-full bg-primary" />
-          </button>
+          {/* Interactive Notifications Center Dropdown */}
+          <NotificationDropdown />
 
           {/* Profile Dropdown */}
           <div className="relative">
@@ -132,14 +125,14 @@ export function Dashboard() {
               <div className="absolute right-0 mt-2 w-56 rounded-xl border border-border/80 bg-card shadow-xl z-50 p-2 text-xs space-y-1 animate-in fade-in slide-in-from-top-2">
                 <div className="px-3 py-2 border-b border-border/40">
                   <p className="font-bold text-foreground">{userName}</p>
-                  <p className="text-muted-foreground truncate">{user?.email || "user@projectflow.com"}</p>
+                  <p className="text-muted-foreground truncate">{user?.email || "suhani@projectflow.com"}</p>
                 </div>
 
                 <button
                   type="button"
                   onClick={() => {
                     setShowProfileMenu(false)
-                    navigate("/dashboard")
+                    navigate("/profile")
                   }}
                   className="w-full flex items-center gap-2 px-3 py-2 rounded-md hover:bg-accent text-foreground transition-colors"
                 >
