@@ -1,5 +1,5 @@
 import React, { useState } from "react"
-import { useNavigate } from "react-router-dom"
+import { useNavigate, Link } from "react-router-dom"
 import {
   FolderPlus,
   CheckCircle2,
@@ -11,7 +11,8 @@ import {
   Search,
   Bell,
   LogOut,
-  User
+  User,
+  ArrowRight
 } from "lucide-react"
 import { useProject } from "@/context/ProjectContext"
 import { Input } from "@/components/ui/input"
@@ -51,6 +52,9 @@ export function Dashboard() {
     p.key.toLowerCase().includes(searchQuery.toLowerCase()) ||
     p.category.toLowerCase().includes(searchQuery.toLowerCase())
   )
+
+  // Limit recent projects to top 3 for the dashboard
+  const recentProjects = filteredProjects.slice(0, 3)
 
   const handleLogout = () => {
     logoutUser()
@@ -156,7 +160,7 @@ export function Dashboard() {
         </div>
       </div>
 
-      {/* 5 Statistics Cards Grid */}
+      {/* 5 Interactive Statistics Cards Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
         <StatsCard
           icon={Building2}
@@ -164,6 +168,7 @@ export function Dashboard() {
           count={totalProjects}
           trend={totalProjects > 0 ? "+1 this month" : undefined}
           iconColor="bg-primary/10 text-primary"
+          onClick={() => navigate("/projects")}
         />
         <StatsCard
           icon={Activity}
@@ -171,6 +176,7 @@ export function Dashboard() {
           count={activeProjects}
           trend={activeProjects > 0 ? "Active in sprint" : undefined}
           iconColor="bg-blue-500/10 text-blue-600"
+          onClick={() => navigate("/projects?status=active")}
         />
         <StatsCard
           icon={ListTodo}
@@ -178,6 +184,7 @@ export function Dashboard() {
           count={totalTasks}
           trend={totalTasks > 0 ? "Across all projects" : undefined}
           iconColor="bg-indigo-500/10 text-indigo-600"
+          onClick={() => navigate("/projects")}
         />
         <StatsCard
           icon={CheckCircle2}
@@ -185,6 +192,7 @@ export function Dashboard() {
           count={completedTasks}
           trend={completedTasks > 0 ? `${Math.round((completedTasks / (totalTasks || 1)) * 100)}% completion` : undefined}
           iconColor="bg-emerald-500/10 text-emerald-600"
+          onClick={() => navigate("/projects?status=completed")}
         />
         <StatsCard
           icon={Clock}
@@ -192,6 +200,7 @@ export function Dashboard() {
           count={pendingTasks}
           trend={pendingTasks > 0 ? "Requires action" : undefined}
           iconColor="bg-amber-500/10 text-amber-600"
+          onClick={() => navigate("/projects?status=pending")}
         />
       </div>
 
@@ -201,18 +210,23 @@ export function Dashboard() {
           <div className="flex items-center justify-between">
             <div className="space-y-0.5">
               <h2 className="text-xl font-bold tracking-tight text-foreground">Recent Projects</h2>
-              <p className="text-xs text-muted-foreground">Workspace projects you are managing</p>
+              <p className="text-xs text-muted-foreground">Recently active workspace projects</p>
             </div>
-            <span className="text-xs font-semibold text-muted-foreground">
-              Showing {filteredProjects.length} project(s)
-            </span>
+
+            {/* View All Projects Link */}
+            <Link
+              to="/projects"
+              className="inline-flex items-center gap-1 text-xs font-semibold text-primary hover:underline group"
+            >
+              View All Projects ({totalProjects}) <ArrowRight className="h-3.5 w-3.5 group-hover:translate-x-0.5 transition-transform" />
+            </Link>
           </div>
 
-          {/* Projects Grid with Add Project Tile */}
+          {/* Recent Projects Grid */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredProjects.length > 0 ? (
+            {recentProjects.length > 0 ? (
               <>
-                {filteredProjects.map((proj) => (
+                {recentProjects.map((proj) => (
                   <ProjectCard key={proj.id} project={proj} />
                 ))}
 
@@ -225,7 +239,9 @@ export function Dashboard() {
                   <div className="h-10 w-10 rounded-full bg-primary/10 text-primary flex items-center justify-center group-hover:scale-110 transition-transform shadow-xs">
                     <Plus className="h-5 w-5 stroke-[2.5]" />
                   </div>
-                  <p className="text-sm font-bold text-foreground group-hover:text-primary transition-colors">Create New Project</p>
+                  <p className="text-sm font-bold text-foreground group-hover:text-primary transition-colors">
+                    Create New Project
+                  </p>
                   <p className="text-xs text-muted-foreground">Add a new workspace to organize tasks</p>
                 </button>
               </>

@@ -1,9 +1,14 @@
 import React from "react"
 import { Card, CardContent } from "@/components/ui/card"
 
-export function StatsCard({ icon: Icon, title, count, trend, iconColor = "bg-primary/10 text-primary" }) {
+export function StatsCard({ icon: Icon, title, count, trend, iconColor = "bg-primary/10 text-primary", onClick }) {
   return (
-    <Card className="border border-border/70 bg-card shadow-xs hover:shadow-md hover:border-primary/30 transition-all duration-200 rounded-xl">
+    <Card
+      onClick={onClick}
+      className={`border border-border/70 bg-card shadow-xs transition-all duration-200 rounded-xl ${
+        onClick ? "cursor-pointer hover:shadow-md hover:border-primary/40 hover:scale-[1.02] active:scale-[0.99]" : ""
+      }`}
+    >
       <CardContent className="p-4 sm:p-5 flex items-center justify-between">
         <div className="space-y-1">
           <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider">{title}</p>

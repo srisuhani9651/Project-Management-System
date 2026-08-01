@@ -1,4 +1,5 @@
 import React, { useState } from "react"
+import { useNavigate } from "react-router-dom"
 import { Search, Plus, Trash2, Edit3, Eye, FolderPlus, Calendar } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import {
@@ -10,12 +11,12 @@ import {
   TableCell,
 } from "@/components/ui/table"
 import { AlertDialog } from "@/components/ui/alert-dialog"
-import { StatusBadge } from "@/components/common/StatusBadge"
 import { PriorityBadge } from "@/components/common/PriorityBadge"
 import { PermissionButton } from "@/components/common/PermissionButton"
 import { EmptyState } from "@/components/common/EmptyState"
 
 export function TaskTable({ tasks = [], onDeleteTask, onUpdateTaskStatus, onCreateTask }) {
+  const navigate = useNavigate()
   const [searchQuery, setSearchQuery] = useState("")
   const [statusFilter, setStatusFilter] = useState("All")
   const [priorityFilter, setPriorityFilter] = useState("All")
@@ -114,7 +115,10 @@ export function TaskTable({ tasks = [], onDeleteTask, onUpdateTaskStatus, onCrea
                 {/* Title */}
                 <TableCell className="font-bold">
                   <div>
-                    <span className="text-foreground hover:text-primary transition-colors cursor-pointer">
+                    <span
+                      onClick={() => navigate(`/tasks/${task.id}`)}
+                      className="text-foreground hover:text-primary transition-colors cursor-pointer"
+                    >
                       {task.name}
                     </span>
                     {task.description && (
@@ -156,7 +160,7 @@ export function TaskTable({ tasks = [], onDeleteTask, onUpdateTaskStatus, onCrea
                   </span>
                 </TableCell>
 
-                {/* Actions: View, Edit, Delete using PermissionButton */}
+                {/* Actions: View, Edit, Delete */}
                 <TableCell className="text-right">
                   <div className="flex items-center justify-end gap-1">
                     <PermissionButton
@@ -165,6 +169,7 @@ export function TaskTable({ tasks = [], onDeleteTask, onUpdateTaskStatus, onCrea
                       resourceData={task}
                       variant="ghost"
                       size="icon"
+                      onClick={() => navigate(`/tasks/${task.id}`)}
                       className="h-8 w-8 text-muted-foreground hover:text-foreground"
                       title="View Details"
                     >
@@ -176,6 +181,7 @@ export function TaskTable({ tasks = [], onDeleteTask, onUpdateTaskStatus, onCrea
                       resourceData={task}
                       variant="ghost"
                       size="icon"
+                      onClick={() => navigate(`/tasks/${task.id}`)}
                       className="h-8 w-8 text-muted-foreground hover:text-foreground"
                       title="Edit Task"
                     >

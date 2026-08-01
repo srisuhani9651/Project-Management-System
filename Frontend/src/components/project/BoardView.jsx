@@ -1,4 +1,5 @@
 import React from "react"
+import { useNavigate } from "react-router-dom"
 import { Calendar, Plus } from "lucide-react"
 import { Card } from "@/components/ui/card"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
@@ -6,6 +7,8 @@ import { PriorityBadge } from "@/components/common/PriorityBadge"
 import { PermissionButton } from "@/components/common/PermissionButton"
 
 export function BoardView({ tasks = [], onUpdateTaskStatus, onCreateTask }) {
+  const navigate = useNavigate()
+
   const columns = [
     { id: "To Do", label: "To Do", color: "bg-muted/80 text-foreground" },
     { id: "In Progress", label: "In Progress", color: "bg-blue-500/10 text-blue-600" },
@@ -26,7 +29,7 @@ export function BoardView({ tasks = [], onUpdateTaskStatus, onCreateTask }) {
       {/* Top action bar */}
       <div className="flex items-center justify-between">
         <p className="text-xs text-muted-foreground">
-          Kanban Board — Select status dropdown on any card to move between columns.
+          Kanban Board — Click any card to open Task Details or use dropdown to move columns.
         </p>
         <PermissionButton
           action="create"
@@ -71,11 +74,14 @@ export function BoardView({ tasks = [], onUpdateTaskStatus, onCreateTask }) {
                   columnTasks.map((task) => (
                     <Card
                       key={task.id}
-                      className="border border-border/80 bg-card hover:shadow-md transition-all p-4 space-y-3 rounded-xl"
+                      onClick={() => navigate(`/tasks/${task.id}`)}
+                      className="border border-border/80 bg-card hover:shadow-md transition-all p-4 space-y-3 rounded-xl cursor-pointer group"
                     >
                       {/* Title & Priority */}
                       <div className="flex items-start justify-between gap-2">
-                        <h4 className="text-xs font-bold text-foreground leading-snug">{task.name}</h4>
+                        <h4 className="text-xs font-bold text-foreground leading-snug group-hover:text-primary transition-colors">
+                          {task.name}
+                        </h4>
                         <PriorityBadge priority={task.priority} />
                       </div>
 
@@ -107,7 +113,7 @@ export function BoardView({ tasks = [], onUpdateTaskStatus, onCreateTask }) {
                       </div>
 
                       {/* Status Dropdown Switcher */}
-                      <div className="pt-1">
+                      <div className="pt-1" onClick={(e) => e.stopPropagation()}>
                         <select
                           value={
                             (task.status || "").toLowerCase().includes("done") ||
