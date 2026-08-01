@@ -1,6 +1,7 @@
 import React, { useState } from "react"
 import { Link, useNavigate } from "react-router-dom"
-import { Kanban, Lock, Mail, AlertCircle, CheckCircle2 } from "lucide-react"
+import { Kanban, Lock, Mail, AlertCircle, Loader2 } from "lucide-react"
+import { useProject } from "@/context/ProjectContext"
 import { Button } from "@/components/ui/button"
 import {
   Card,
@@ -14,6 +15,7 @@ import { Label } from "@/components/ui/label"
 
 export function Login() {
   const navigate = useNavigate()
+  const { loginUser } = useProject()
 
   const [formData, setFormData] = useState({
     email: "",
@@ -21,7 +23,7 @@ export function Login() {
   })
 
   const [errors, setErrors] = useState({})
-  const [isSubmitted, setIsSubmitted] = useState(false)
+  const [isLoading, setIsLoading] = useState(false)
 
   const handleChange = (e) => {
     const { name, value } = e.target
@@ -53,12 +55,20 @@ export function Login() {
     }
 
     setErrors({})
-    setIsSubmitted(true)
+    setIsLoading(true)
 
-    // Simulate login success redirect
+    // Log in user with formatted name
+    const emailName = formData.email.split("@")[0]
+    const formattedName = emailName.charAt(0).toUpperCase() + emailName.slice(1)
+
+    loginUser({
+      fullName: formattedName,
+      email: formData.email.trim(),
+    })
+
     setTimeout(() => {
-      navigate("/")
-    }, 1500)
+      navigate("/dashboard")
+    }, 600)
   }
 
   return (
@@ -82,74 +92,71 @@ export function Login() {
           </CardHeader>
 
           <CardContent className="pt-6">
-            {isSubmitted ? (
-              <div className="flex flex-col items-center justify-center py-6 text-center space-y-3">
-                <div className="rounded-full bg-emerald-500/10 p-3 text-emerald-600">
-                  <CheckCircle2 className="h-8 w-8" />
+            <form onSubmit={handleSubmit} className="space-y-4">
+              
+              {/* Email */}
+              <div className="space-y-2">
+                <Label htmlFor="email">Email Address</Label>
+                <div className="relative">
+                  <Mail className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    id="email"
+                    name="email"
+                    type="email"
+                    placeholder="name@example.com"
+                    disabled={isLoading}
+                    value={formData.email}
+                    onChange={handleChange}
+                    className={`pl-9 ${errors.email ? "border-destructive focus-visible:ring-destructive" : ""}`}
+                  />
                 </div>
-                <h3 className="text-lg font-bold text-foreground">Logged In Successfully!</h3>
-                <p className="text-sm text-muted-foreground">
-                  Redirecting to your workspace...
-                </p>
+                {errors.email && (
+                  <p className="text-xs text-destructive flex items-center gap-1">
+                    <AlertCircle className="h-3 w-3" /> {errors.email}
+                  </p>
+                )}
               </div>
-            ) : (
-              <form onSubmit={handleSubmit} className="space-y-4">
-                
-                {/* Email */}
-                <div className="space-y-2">
-                  <Label htmlFor="email">Email Address</Label>
-                  <div className="relative">
-                    <Mail className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
-                    <Input
-                      id="email"
-                      name="email"
-                      type="email"
-                      placeholder="name@example.com"
-                      value={formData.email}
-                      onChange={handleChange}
-                      className={`pl-9 ${errors.email ? "border-destructive focus-visible:ring-destructive" : ""}`}
-                    />
-                  </div>
-                  {errors.email && (
-                    <p className="text-xs text-destructive flex items-center gap-1">
-                      <AlertCircle className="h-3 w-3" /> {errors.email}
-                    </p>
-                  )}
-                </div>
 
-                {/* Password */}
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <Label htmlFor="password">Password</Label>
-                    <a href="#forgot" onClick={(e) => e.preventDefault()} className="text-xs font-medium text-primary hover:underline">
-                      Forgot password?
-                    </a>
-                  </div>
-                  <div className="relative">
-                    <Lock className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
-                    <Input
-                      id="password"
-                      name="password"
-                      type="password"
-                      placeholder="••••••••"
-                      value={formData.password}
-                      onChange={handleChange}
-                      className={`pl-9 ${errors.password ? "border-destructive focus-visible:ring-destructive" : ""}`}
-                    />
-                  </div>
-                  {errors.password && (
-                    <p className="text-xs text-destructive flex items-center gap-1">
-                      <AlertCircle className="h-3 w-3" /> {errors.password}
-                    </p>
-                  )}
+              {/* Password */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="password">Password</Label>
+                  <a href="#forgot" onClick={(e) => e.preventDefault()} className="text-xs font-medium text-primary hover:underline">
+                    Forgot password?
+                  </a>
                 </div>
+                <div className="relative">
+                  <Lock className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    id="password"
+                    name="password"
+                    type="password"
+                    placeholder="••••••••"
+                    disabled={isLoading}
+                    value={formData.password}
+                    onChange={handleChange}
+                    className={`pl-9 ${errors.password ? "border-destructive focus-visible:ring-destructive" : ""}`}
+                  />
+                </div>
+                {errors.password && (
+                  <p className="text-xs text-destructive flex items-center gap-1">
+                    <AlertCircle className="h-3 w-3" /> {errors.password}
+                  </p>
+                )}
+              </div>
 
-                {/* Submit Button */}
-                <Button type="submit" className="w-full font-semibold shadow-md mt-2">
-                  Login
-                </Button>
-              </form>
-            )}
+              {/* Submit Button with Loader2 */}
+              <Button type="submit" disabled={isLoading} className="w-full font-semibold shadow-md mt-2">
+                {isLoading ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                    Logging in...
+                  </>
+                ) : (
+                  "Login"
+                )}
+              </Button>
+            </form>
 
             {/* Footer Navigation Link */}
             <div className="mt-6 text-center text-sm text-muted-foreground border-t border-border/40 pt-4">
