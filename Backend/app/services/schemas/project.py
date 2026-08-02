@@ -1,0 +1,87 @@
+from datetime import datetime
+from typing import List, Optional
+from uuid import UUID
+from pydantic import BaseModel, Field
+
+
+class ProjectCreate(BaseModel):
+    """Schema for creating a project."""
+    project_name: str = Field(..., min_length=1, max_length=255, description="Name of the project")
+    project_description: Optional[str] = Field(None, max_length=255, description="Description of the project")
+    status_id: Optional[UUID] = None
+    priority_id: Optional[UUID] = None
+    project_type_id: Optional[UUID] = None
+    category_id: Optional[UUID] = None
+    planned_start_date: Optional[datetime] = None
+    planned_end_date: Optional[datetime] = None
+    actual_start_date: Optional[datetime] = None
+    actual_end_date: Optional[datetime] = None
+    estimated_duration: Optional[int] = None
+
+
+class ProjectUpdate(BaseModel):
+    """Schema for updating a project."""
+    project_name: Optional[str] = Field(None, min_length=1, max_length=255)
+    project_description: Optional[str] = None
+    status_id: Optional[UUID] = None
+    priority_id: Optional[UUID] = None
+    project_type_id: Optional[UUID] = None
+    category_id: Optional[UUID] = None
+    planned_start_date: Optional[datetime] = None
+    planned_end_date: Optional[datetime] = None
+    actual_start_date: Optional[datetime] = None
+    actual_end_date: Optional[datetime] = None
+    estimated_duration: Optional[int] = None
+    is_active: Optional[bool] = None
+
+
+class ProjectResponse(BaseModel):
+    """Schema for returning project details."""
+    project_id: UUID
+    project_name: str
+    project_description: Optional[str] = None
+    status_id: Optional[UUID] = None
+    status_name: Optional[str] = None
+    priority_id: Optional[UUID] = None
+    priority_name: Optional[str] = None
+    project_type_id: Optional[UUID] = None
+    project_type_name: Optional[str] = None
+    category_id: Optional[UUID] = None
+    category_name: Optional[str] = None
+    planned_start_date: Optional[datetime] = None
+    planned_end_date: Optional[datetime] = None
+    actual_start_date: Optional[datetime] = None
+    actual_end_date: Optional[datetime] = None
+    estimated_duration: Optional[int] = None
+    created_by: Optional[UUID] = None
+    is_active: bool
+    created_at: Optional[datetime] = None
+    updated_at: Optional[datetime] = None
+
+    class Config:
+        from_attributes = True
+
+
+class CreateProjectResponse(BaseModel):
+    message: str = "Project created successfully"
+    project: ProjectResponse
+
+
+class UpdateProjectResponse(BaseModel):
+    message: str = "Project updated successfully"
+    project: ProjectResponse
+
+
+class LOVItem(BaseModel):
+    id: UUID
+    name: str
+
+    class Config:
+        from_attributes = True
+
+
+class ProjectLOVResponse(BaseModel):
+    statuses: List[LOVItem]
+    priorities: List[LOVItem]
+    project_types: List[LOVItem]
+    categories: List[LOVItem]
