@@ -17,7 +17,7 @@ class UserMaster(Base):
     __tablename__ = "user_master"
     __table_args__ = {"schema": "auth"}
 
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     full_name = Column(String(255), nullable=False)
     email = Column(String(255), unique=True, nullable=False)
     username = Column(String(100),nullable=True )

@@ -6,20 +6,20 @@ from sqlalchemy.dialects.postgresql import UUID
 from app.db.database import Base
 
 
-class Priority(Base):
+class TaskType(Base):
     """
     WHAT IT DOES:
-    Database table model for managing priority details in the 'lov' schema.
+    Database table model for managing task type details in the 'lov' schema.
 
     EXPECTED RESULT:
-    Maps Priority instances to the 'lov.master_priority' PostgreSQL table.
+    Maps TaskType instances to the 'lov.master_task_type' PostgreSQL table.
     """
-    __tablename__ = "master_priority"
+    __tablename__ = "master_task_type"
     __table_args__ = {"schema": "lov"}
 
-    priority_id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    priority_name = Column(String(255), nullable=False)
-    priority_description = Column(String(255), nullable=True)
+    task_type_id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    type_name = Column(String(255), nullable=False)
+    type_description = Column(String(255), nullable=True)
     is_active = Column(Boolean, nullable=False, default=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(
@@ -31,7 +31,7 @@ class Priority(Base):
 
 # Automatically create the 'lov' schema if it does not exist before table creation
 event.listen(
-    Priority.__table__,
+    TaskType.__table__,
     "before_create",
     DDL("CREATE SCHEMA IF NOT EXISTS lov;"),
 )
