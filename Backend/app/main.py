@@ -1,5 +1,6 @@
 from fastapi import FastAPI
 from app.db.database import init_db
+from app.routers import auth
 
 # ==============================================================================
 # FASTAPI APPLICATION SETUP
@@ -13,9 +14,12 @@ app = FastAPI(
 )
 
 # WHAT IT DOES:
-# Initializes the database, verifies connections, and auto-creates schemas and tables on server startup.
-# EXPECTED RESULT: Database schemas and tables are ready before handling requests.
+# Initializes the database, verifies connections, auto-creates schemas/tables, and seeds LOV data.
+# EXPECTED RESULT: Database schemas, tables, and LOV records ready on server launch.
 init_db()
+
+# Include Routers
+app.include_router(auth.router)
 
 
 # ==============================================================================
@@ -34,6 +38,7 @@ def home():
     return {
         "message": "Welcome to Project Management API"
     }
+
 
 
 
