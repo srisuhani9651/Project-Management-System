@@ -3,24 +3,30 @@ import { NavLink, useNavigate, useLocation } from "react-router-dom"
 import {
   LayoutDashboard,
   Folder,
-  Settings,
+  CheckSquare,
   LogOut,
   Kanban,
   X,
+  Plus,
   ChevronLeft,
   ChevronRight,
 } from "lucide-react"
 import { useProject } from "@/context/ProjectContext"
 
+/**
+ * Sidebar Component
+ * Streamlined Enterprise Pro sidebar with logo, Dashboard, Projects, Tasks,
+ * "+ Create New Project" CTA, and Logout button.
+ */
 export function Sidebar({ isOpen, onClose, collapsed, onToggleCollapse }) {
   const navigate = useNavigate()
   const location = useLocation()
   const { logoutUser } = useProject()
 
+  // Navigation Items (Dashboard & Projects only)
   const navItems = [
     { label: "Dashboard", icon: LayoutDashboard, path: "/dashboard" },
     { label: "Projects", icon: Folder, path: "/projects" },
-    { label: "Settings", icon: Settings, path: "/settings" },
   ]
 
   const handleLogout = async () => {
@@ -44,17 +50,24 @@ export function Sidebar({ isOpen, onClose, collapsed, onToggleCollapse }) {
           isOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"
         } ${collapsed ? "w-16" : "w-64"}`}
       >
-        {/* Top Header & Logo */}
-        <div>
-          <div className="h-16 flex items-center justify-between px-4 border-b border-border/60">
+        {/* Top Section: Brand Header & Navigation */}
+        <div className="flex-1 flex flex-col min-h-0 overflow-y-auto">
+          
+          {/* Brand Header Logo */}
+          <div className="h-20 flex items-center justify-between px-5 border-b border-border/60 shrink-0">
             <NavLink to="/dashboard" className="flex items-center gap-3 overflow-hidden">
-              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-sm shrink-0">
-                <Kanban className="h-5 w-5" />
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-600 text-white shadow-md shadow-blue-500/20 shrink-0">
+                <Kanban className="h-5 w-5 stroke-[2.5]" />
               </div>
               {!collapsed && (
-                <span className="text-lg font-extrabold tracking-tight text-foreground whitespace-nowrap">
-                  Project<span className="text-primary">Flow</span>
-                </span>
+                <div className="flex flex-col">
+                  <span className="text-base font-extrabold tracking-tight text-foreground leading-none">
+                    Project<span className="text-blue-600">Flow</span>
+                  </span>
+                  <span className="text-[10px] font-semibold text-muted-foreground mt-0.5 tracking-wider uppercase">
+                    Enterprise Pro
+                  </span>
+                </div>
               )}
             </NavLink>
 
@@ -67,54 +80,74 @@ export function Sidebar({ isOpen, onClose, collapsed, onToggleCollapse }) {
             </button>
           </div>
 
-          {/* Navigation Links */}
-          <nav className="space-y-1 px-2 py-2">
+          {/* Main Navigation Items */}
+          <nav className="space-y-1.5 px-3 py-4 flex-1">
             {navItems.map((item) => {
               const isActive =
                 location.pathname === item.path ||
-                (item.path === "/projects" && location.pathname.startsWith("/projects"))
+                (item.path === "/projects" && location.pathname.startsWith("/projects") && item.label === "Projects")
               const Icon = item.icon
               return (
                 <NavLink
-                  key={item.path}
+                  key={item.label}
                   to={item.path}
                   onClick={() => onClose && onClose()}
-                  className={`flex items-center gap-3 px-3 py-2.5 rounded-xl font-medium text-xs transition-all ${
+                  className={`flex items-center gap-3.5 px-3.5 py-3 rounded-xl font-semibold text-xs transition-all ${
                     isActive
-                      ? "bg-primary/10 text-primary font-bold shadow-xs"
-                      : "text-muted-foreground hover:bg-accent hover:text-foreground"
+                      ? "bg-blue-500/10 text-blue-600 font-bold shadow-xs border border-blue-500/20"
+                      : "text-muted-foreground hover:bg-accent/60 hover:text-foreground"
                   }`}
                   title={collapsed ? item.label : undefined}
                 >
-                  <Icon className={`h-4 w-4 shrink-0 ${isActive ? "text-primary" : ""}`} />
+                  <Icon className={`h-4.5 w-4.5 shrink-0 ${isActive ? "text-blue-600" : ""}`} />
                   {!collapsed && <span className="truncate">{item.label}</span>}
                 </NavLink>
               )
             })}
           </nav>
+
+          {/* "+ Create New Project" Sidebar Action Button */}
+          {!collapsed && (
+            <div className="px-4 py-3 shrink-0">
+              <button
+                type="button"
+                onClick={() => {
+                  if (onClose) onClose()
+                  navigate("/projects/create")
+                }}
+                className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl bg-blue-600 text-white font-bold text-xs shadow-md hover:bg-blue-700 transition-all cursor-pointer"
+              >
+                <Plus className="h-4 w-4 stroke-[3]" />
+                <span>Create New Project</span>
+              </button>
+            </div>
+          )}
+
         </div>
 
-        {/* Bottom Actions: Collapse Toggle & Logout */}
-        <div className="p-3 border-t border-border/60 space-y-1">
-          {/* Desktop Collapse Toggle */}
+        {/* Bottom Utility Menu: Logout & Collapse Toggle */}
+        <div className="p-4 border-t border-border/60 space-y-2 shrink-0">
+          
+          {/* Logout */}
           <button
-            onClick={onToggleCollapse}
-            className="hidden md:flex w-full items-center justify-center p-2 rounded-xl text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
-            title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
-          >
-            {collapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
-          </button>
-
-          {/* Logout Button */}
-          <button
+            type="button"
             onClick={handleLogout}
-            className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl font-medium text-xs text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors ${
+            className={`w-full flex items-center gap-3.5 px-3.5 py-2.5 rounded-xl font-semibold text-xs text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors ${
               collapsed ? "justify-center px-0" : ""
             }`}
             title={collapsed ? "Logout" : undefined}
           >
-            <LogOut className="h-4 w-4 shrink-0" />
+            <LogOut className="h-4.5 w-4.5 shrink-0" />
             {!collapsed && <span>Logout</span>}
+          </button>
+
+          {/* Desktop Collapse Toggle */}
+          <button
+            onClick={onToggleCollapse}
+            className="hidden md:flex w-full items-center justify-center p-2 rounded-xl text-muted-foreground hover:bg-accent hover:text-foreground transition-colors border border-border/40 mt-1"
+            title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+          >
+            {collapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
           </button>
         </div>
       </aside>

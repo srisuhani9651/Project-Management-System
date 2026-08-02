@@ -1,5 +1,5 @@
 import React from "react"
-import { BrowserRouter as Router, Routes, Route } from "react-router-dom"
+import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom"
 import { ProjectProvider, useProject } from "@/context/ProjectContext"
 import ScrollToTop from "@/components/ScrollToTop"
 import Navbar from "@/components/Navbar"
@@ -13,6 +13,15 @@ import ProjectDetails from "@/pages/ProjectDetails"
 import Projects from "@/pages/Projects"
 import TaskDetails from "@/pages/TaskDetails"
 import Profile from "@/pages/Profile"
+
+/** Redirects unauthenticated users to /login */
+function ProtectedRoute({ children }) {
+  const token = localStorage.getItem("pf_token")
+  if (!token) {
+    return <Navigate to="/login" replace />
+  }
+  return children
+}
 
 function AppContent() {
   const { user } = useProject()
@@ -71,79 +80,74 @@ function AppContent() {
         <Route
           path="/dashboard"
           element={
-            <AppLayout>
-              <Dashboard />
-            </AppLayout>
+            <ProtectedRoute>
+              <AppLayout><Dashboard /></AppLayout>
+            </ProtectedRoute>
           }
         />
         <Route
           path="/projects"
           element={
-            <AppLayout>
-              <Projects />
-            </AppLayout>
+            <ProtectedRoute>
+              <AppLayout><Projects /></AppLayout>
+            </ProtectedRoute>
           }
         />
         <Route
           path="/create-project"
           element={
-            <AppLayout>
-              <CreateProject />
-            </AppLayout>
+            <ProtectedRoute>
+              <AppLayout><CreateProject /></AppLayout>
+            </ProtectedRoute>
           }
         />
         <Route
           path="/projects/create"
           element={
-            <AppLayout>
-              <CreateProject />
-            </AppLayout>
+            <ProtectedRoute>
+              <AppLayout><CreateProject /></AppLayout>
+            </ProtectedRoute>
           }
         />
         <Route
           path="/projects/:projectId"
           element={
-            <AppLayout>
-              <ProjectDetails />
-            </AppLayout>
-          }
-        />
-        <Route
-          path="/projects/:id"
-          element={
-            <AppLayout>
-              <ProjectDetails />
-            </AppLayout>
+            <ProtectedRoute>
+              <AppLayout><ProjectDetails /></AppLayout>
+            </ProtectedRoute>
           }
         />
         <Route
           path="/tasks/:taskId"
           element={
-            <AppLayout>
-              <TaskDetails />
-            </AppLayout>
+            <ProtectedRoute>
+              <AppLayout><TaskDetails /></AppLayout>
+            </ProtectedRoute>
           }
         />
         <Route
           path="/profile"
           element={
-            <AppLayout>
-              <Profile />
-            </AppLayout>
+            <ProtectedRoute>
+              <AppLayout><Profile /></AppLayout>
+            </ProtectedRoute>
           }
         />
         <Route
           path="/settings"
           element={
-            <AppLayout>
-              <div className="flex-1 py-12 px-8 max-w-4xl mx-auto space-y-4">
-                <h1 className="text-2xl font-bold">Workspace Settings</h1>
-                <p className="text-xs text-muted-foreground">Manage project defaults, notification preferences, and team permissions.</p>
-              </div>
-            </AppLayout>
+            <ProtectedRoute>
+              <AppLayout>
+                <div className="flex-1 py-12 px-8 max-w-4xl mx-auto space-y-4">
+                  <h1 className="text-2xl font-bold">Workspace Settings</h1>
+                  <p className="text-xs text-muted-foreground">Manage project defaults, notification preferences, and team permissions.</p>
+                </div>
+              </AppLayout>
+            </ProtectedRoute>
           }
         />
       </Routes>
+
     </div>
   )
 }

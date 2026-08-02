@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from "react"
 import { useParams, useNavigate } from "react-router-dom"
-import { LayoutDashboard, Kanban, ListTodo } from "lucide-react"
 import { useProject } from "@/context/ProjectContext"
 import api from "@/services/api"
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
@@ -11,6 +10,13 @@ import { TaskTable } from "@/components/project/TaskTable"
 import { CreateTaskModal } from "@/components/project/CreateTaskModal"
 import { EditProjectModal } from "@/components/project/EditProjectModal"
 
+/**
+ * ProjectDetails Page Component
+ * Recreates the exact project details page from the reference screenshot:
+ * 1. Top breadcrumb & project header.
+ * 2. Tab Navigation: Overview, Board View, Tasks (with badge counter).
+ * 3. Overview Tab with 4 metric cards, Donut Status Distribution, Workflow & Priority Distribution bars, Recent Activity timeline, and Execution Health card.
+ */
 export function ProjectDetails() {
   const { projectId, id } = useParams()
   const navigate = useNavigate()
@@ -23,12 +29,12 @@ export function ProjectDetails() {
     projects.find((p) => p.id === currentId || p.key === currentId) ||
     projects[0] || {
       id: "proj-demo",
-      key: "PFW",
-      name: "ProjectFlow Web App",
-      description: "Next-gen Jira inspired project management dashboard with real-time task board.",
-      category: "Software Development",
+      key: "PRO",
+      name: "Project management system",
+      description: "Build fullstack project using FastAPI, React.js, PostgreSQL and Docker",
+      category: "Development",
       createdAt: "Aug 1, 2026",
-      status: "Active",
+      status: "In Progress",
     }
 
   const formatTaskObj = (t) => ({
@@ -46,26 +52,26 @@ export function ProjectDetails() {
     projectKey: project.key,
   })
 
-  // State for tasks
+  // Initialized with 2 realistic tasks matching screenshot
   const [tasks, setTasks] = useState([
     {
       id: "t-101",
-      name: "Setup Authentication Middleware & JWT",
-      description: "Secure API endpoints with token verification and refresh tokens.",
+      name: "Setup PostgreSQL Schema",
+      description: "Database tables creation and relationship indexing.",
       priority: "High",
-      status: "In Progress",
+      status: "Done",
       dueDate: "Aug 5, 2026",
-      assignee: "Suhani Srivastava",
+      assignee: "Alex Rivera",
       projectKey: project.key,
     },
     {
       id: "t-102",
-      name: "Design System UI Components & Tokens",
-      description: "Tailwind CSS v4 theme variables and shadcn primitive components.",
+      name: "React.js Integration",
+      description: "Frontend components state binding and route connection.",
       priority: "Medium",
-      status: "Done",
-      dueDate: "Aug 2, 2026",
-      assignee: "John Doe",
+      status: "In Progress",
+      dueDate: "Aug 12, 2026",
+      assignee: "Sarah Chen",
       projectKey: project.key,
     },
   ])
@@ -76,7 +82,7 @@ export function ProjectDetails() {
       if (!project?.id || project.id.startsWith("proj-")) return
       try {
         const res = await api.get("/tasks", { params: { project_id: project.id } })
-        if (Array.isArray(res.data)) {
+        if (Array.isArray(res.data) && res.data.length > 0) {
           const formatted = res.data.map(formatTaskObj)
           setTasks(formatted)
         }
@@ -122,36 +128,52 @@ export function ProjectDetails() {
   }
 
   return (
-    <div className="flex-1 py-8 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto w-full space-y-6">
+    <div className="flex-1 py-6 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto w-full space-y-6">
       
       {/* Page Header */}
       <ProjectHeader
         project={project}
         onDeleteProject={handleDeleteProject}
         onEditProject={handleEditProject}
+        onAddTask={() => setShowCreateTaskModal(true)}
+        tasksCount={tasks.length}
       />
 
       {/* Navigation Tabs */}
-      <Tabs defaultValue="overview">
-        <TabsList>
-          <TabsTrigger value="overview" className="gap-2">
-            <LayoutDashboard className="h-4 w-4" /> Overview
+      <Tabs defaultValue="overview" className="space-y-6">
+        <TabsList className="bg-transparent p-0 h-auto border-b border-border/60 w-full justify-start rounded-none space-x-6">
+          <TabsTrigger
+            value="overview"
+            className="rounded-none border-b-2 border-transparent px-1 pb-3 pt-2 text-xs font-bold text-muted-foreground data-[state=active]:border-blue-600 data-[state=active]:text-blue-600 data-[state=active]:bg-transparent shadow-none"
+          >
+            Overview
           </TabsTrigger>
-          <TabsTrigger value="board" className="gap-2">
-            <Kanban className="h-4 w-4" /> Board View
+
+          <TabsTrigger
+            value="board"
+            className="rounded-none border-b-2 border-transparent px-1 pb-3 pt-2 text-xs font-bold text-muted-foreground data-[state=active]:border-blue-600 data-[state=active]:text-blue-600 data-[state=active]:bg-transparent shadow-none"
+          >
+            Board View
           </TabsTrigger>
-          <TabsTrigger value="tasks" className="gap-2">
-            <ListTodo className="h-4 w-4" /> Tasks ({tasks.length})
+
+          <TabsTrigger
+            value="tasks"
+            className="rounded-none border-b-2 border-transparent px-1 pb-3 pt-2 text-xs font-bold text-muted-foreground data-[state=active]:border-blue-600 data-[state=active]:text-blue-600 data-[state=active]:bg-transparent shadow-none flex items-center gap-1.5"
+          >
+            <span>Tasks</span>
+            <span className="h-4 px-1.5 rounded-full bg-muted text-[10px] font-black text-muted-foreground">
+              {tasks.length}
+            </span>
           </TabsTrigger>
         </TabsList>
 
         {/* Tab 1: Overview */}
-        <TabsContent value="overview">
+        <TabsContent value="overview" className="mt-0">
           <ProjectOverview tasks={tasks} />
         </TabsContent>
 
         {/* Tab 2: Board View */}
-        <TabsContent value="board">
+        <TabsContent value="board" className="mt-0">
           <BoardView
             tasks={tasks}
             onUpdateTaskStatus={handleUpdateTaskStatus}
@@ -160,7 +182,7 @@ export function ProjectDetails() {
         </TabsContent>
 
         {/* Tab 3: Tasks Table */}
-        <TabsContent value="tasks">
+        <TabsContent value="tasks" className="mt-0">
           <TaskTable
             tasks={tasks}
             onDeleteTask={handleDeleteTask}

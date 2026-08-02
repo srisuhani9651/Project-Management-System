@@ -1,119 +1,131 @@
 import React from "react"
 import { useNavigate } from "react-router-dom"
-import { Calendar, Plus } from "lucide-react"
+import { Calendar, Inbox, CheckCircle2, Clock, MoreHorizontal } from "lucide-react"
 import { Card } from "@/components/ui/card"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { PriorityBadge } from "@/components/common/PriorityBadge"
-import { PermissionButton } from "@/components/common/PermissionButton"
 
-export function BoardView({ tasks = [], onUpdateTaskStatus, onCreateTask }) {
+/**
+ * BoardView Component
+ * Kanban board matching the reference screenshot:
+ * - 3 columns: To Do, In Progress, Done with status-colored headers
+ * - Task cards with priority badge, initials avatar, name, due date, status dropdown
+ * - Empty state with centered icon + label matching screenshot
+ * - ⋯ menu on each column header
+ */
+export function BoardView({ tasks = [], onUpdateTaskStatus }) {
   const navigate = useNavigate()
 
   const columns = [
-    { id: "To Do", label: "To Do", color: "bg-muted/80 text-foreground" },
-    { id: "In Progress", label: "In Progress", color: "bg-blue-500/10 text-blue-600" },
-    { id: "Done", label: "Done", color: "bg-emerald-500/10 text-emerald-600" },
+    {
+      id: "To Do",
+      label: "To Do",
+      headerClass: "bg-muted/80 text-foreground border-muted",
+      emptyIcon: <Inbox className="h-10 w-10 text-muted-foreground/30" />,
+    },
+    {
+      id: "In Progress",
+      label: "In Progress",
+      headerClass: "bg-blue-500 text-white border-blue-500",
+      emptyIcon: <Clock className="h-10 w-10 text-muted-foreground/30" />,
+    },
+    {
+      id: "Done",
+      label: "Done",
+      headerClass: "bg-emerald-500/10 text-emerald-600 border-emerald-500/20",
+      emptyIcon: <CheckCircle2 className="h-10 w-10 text-muted-foreground/30" />,
+    },
   ]
 
   const getInitials = (name) => {
     if (!name) return "U"
-    return name
-      .split(" ")
-      .map((n) => n[0])
-      .join("")
-      .toUpperCase()
+    return name.split(" ").map((n) => n[0]).join("").toUpperCase().substring(0, 2)
+  }
+
+  const getAvatarColor = (name = "") => {
+    const colors = ["bg-blue-600", "bg-violet-600", "bg-indigo-600", "bg-pink-600", "bg-amber-600"]
+    const idx = name.charCodeAt(0) % colors.length
+    return colors[idx]
   }
 
   return (
-    <div className="pt-2 space-y-4">
-      {/* Top action bar */}
-      <div className="flex items-center justify-between">
-        <p className="text-xs text-muted-foreground">
-          Kanban Board — Click any card to open Task Details or use dropdown to move columns.
-        </p>
-        <PermissionButton
-          action="create"
-          resource="task"
-          size="sm"
-          onClick={onCreateTask}
-          className="gap-1.5 text-xs font-semibold"
-        >
-          <Plus className="h-4 w-4" /> Add Task
-        </PermissionButton>
-      </div>
+    <div className="pt-2 space-y-4 animate-fade-in">
 
-      {/* Board Columns Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-start">
+      {/* Info bar */}
+      <p className="text-xs text-muted-foreground font-medium italic">
+        Kanban Board — Drag or select status dropdowns to reorder work cards.
+      </p>
+
+      {/* 3-column grid */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-5 items-start">
         {columns.map((column) => {
           const columnTasks = tasks.filter((t) => {
-            const status = (t.status || "").toLowerCase()
-            if (column.id === "To Do") return status === "to do" || status === "todo"
-            if (column.id === "In Progress") return status === "in progress"
-            if (column.id === "Done") return status === "done" || status === "completed"
+            const s = (t.status || "").toLowerCase()
+            if (column.id === "To Do") return s === "to do" || s === "todo"
+            if (column.id === "In Progress") return s === "in progress"
+            if (column.id === "Done") return s === "done" || s === "completed"
             return false
           })
 
           return (
             <div
               key={column.id}
-              className="flex flex-col gap-3 rounded-2xl border border-border/70 bg-card/60 p-4 shadow-xs min-h-[450px]"
+              className="flex flex-col gap-3 rounded-2xl border border-border/60 bg-card/50 p-4 shadow-xs min-h-[420px]"
             >
               {/* Column Header */}
-              <div className="flex items-center justify-between pb-2 border-b border-border/50">
+              <div className="flex items-center justify-between pb-3 border-b border-border/50">
                 <div className="flex items-center gap-2">
-                  <span className={`px-2.5 py-1 rounded-md text-xs font-bold ${column.color}`}>
+                  <span className={`px-3 py-1 rounded-lg text-xs font-bold border ${column.headerClass}`}>
                     {column.label}
                   </span>
-                  <span className="text-xs font-bold text-muted-foreground">{columnTasks.length}</span>
+                  <span className="text-xs font-bold text-muted-foreground">
+                    {columnTasks.length}
+                  </span>
                 </div>
+                <button className="text-muted-foreground hover:text-foreground transition-colors p-1 rounded-md hover:bg-muted/60">
+                  <MoreHorizontal className="h-4 w-4" />
+                </button>
               </div>
 
-              {/* Task Cards Container */}
-              <div className="space-y-3 flex-1 overflow-y-auto pr-1">
+              {/* Task Cards */}
+              <div className="space-y-3 flex-1">
                 {columnTasks.length > 0 ? (
                   columnTasks.map((task) => (
                     <Card
                       key={task.id}
                       onClick={() => navigate(`/tasks/${task.id}`)}
-                      className="border border-border/80 bg-card hover:shadow-md transition-all p-4 space-y-3 rounded-xl cursor-pointer group"
+                      className="border border-border/70 bg-card hover:border-primary/30 hover:shadow-md hover:-translate-y-0.5 transition-all p-4 space-y-3 rounded-xl cursor-pointer group"
                     >
-                      {/* Title & Priority */}
+                      {/* Title + Priority */}
                       <div className="flex items-start justify-between gap-2">
-                        <h4 className="text-xs font-bold text-foreground leading-snug group-hover:text-primary transition-colors">
-                          {task.name}
+                        <h4 className="text-xs font-bold text-foreground leading-snug group-hover:text-primary transition-colors line-clamp-2">
+                          {task.name || task.title}
                         </h4>
                         <PriorityBadge priority={task.priority} />
                       </div>
 
-                      {/* Description snippet */}
-                      {task.description && (
-                        <p className="text-[11px] text-muted-foreground line-clamp-2">
-                          {task.description}
-                        </p>
-                      )}
-
-                      {/* Assignee & Due Date */}
-                      <div className="flex items-center justify-between pt-2 border-t border-border/40 text-xs">
-                        <div className="flex items-center gap-2">
+                      {/* Assignee + Due Date row */}
+                      <div className="flex items-center justify-between pt-1 border-t border-border/40 text-xs">
+                        <div className="flex items-center gap-1.5">
                           <Avatar className="h-6 w-6">
-                            <AvatarFallback className="text-[10px] bg-primary/10 text-primary font-bold">
-                              {getInitials(task.assignee || "Suhani")}
+                            <AvatarFallback className={`text-[10px] font-bold text-white ${getAvatarColor(task.assignee)}`}>
+                              {getInitials(task.assignee || "User")}
                             </AvatarFallback>
                           </Avatar>
                           <span className="text-[11px] font-medium text-muted-foreground truncate max-w-[90px]">
-                            {task.assignee || "Suhani"}
+                            {task.assignee || "Unassigned"}
                           </span>
                         </div>
 
                         {task.dueDate && (
-                          <span className="text-[10px] text-muted-foreground flex items-center gap-1">
+                          <span className="text-[10px] text-muted-foreground font-medium flex items-center gap-1">
                             <Calendar className="h-3 w-3" /> {task.dueDate}
                           </span>
                         )}
                       </div>
 
-                      {/* Status Dropdown Switcher */}
-                      <div className="pt-1" onClick={(e) => e.stopPropagation()}>
+                      {/* Status Dropdown */}
+                      <div onClick={(e) => e.stopPropagation()}>
                         <select
                           value={
                             (task.status || "").toLowerCase().includes("done") ||
@@ -124,7 +136,7 @@ export function BoardView({ tasks = [], onUpdateTaskStatus, onCreateTask }) {
                               : "To Do"
                           }
                           onChange={(e) => onUpdateTaskStatus(task.id, e.target.value)}
-                          className="w-full text-[11px] font-semibold h-7 rounded-md border border-input bg-muted/40 px-2 text-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+                          className="w-full text-[11px] font-semibold h-7 rounded-md border border-input bg-muted/40 px-2 text-foreground focus:outline-none focus:ring-1 focus:ring-primary cursor-pointer hover:bg-muted/70 transition-colors"
                         >
                           <option value="To Do">Status: To Do</option>
                           <option value="In Progress">Status: In Progress</option>
@@ -134,8 +146,12 @@ export function BoardView({ tasks = [], onUpdateTaskStatus, onCreateTask }) {
                     </Card>
                   ))
                 ) : (
-                  <div className="py-12 text-center text-xs text-muted-foreground border border-dashed rounded-xl">
-                    No tasks in {column.label}
+                  /* Empty State — icon + label matching screenshot */
+                  <div className="flex flex-col items-center justify-center gap-3 py-16 border border-dashed border-border/60 rounded-xl bg-muted/10 h-full min-h-[280px]">
+                    {column.emptyIcon}
+                    <p className="text-xs text-muted-foreground font-medium">
+                      No tasks in {column.label}
+                    </p>
                   </div>
                 )}
               </div>

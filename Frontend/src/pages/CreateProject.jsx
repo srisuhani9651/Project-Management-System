@@ -1,34 +1,61 @@
 import React, { useState } from "react"
-import { useNavigate, Link } from "react-router-dom"
-import { FolderPlus, ArrowLeft, AlertCircle } from "lucide-react"
+import { useNavigate } from "react-router-dom"
+import { ArrowLeft, AlertCircle, Settings } from "lucide-react"
 import { useProject } from "@/context/ProjectContext"
 import api from "@/services/api"
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card"
+import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { ProjectForm } from "@/components/project/ProjectForm"
+import { NotificationDropdown } from "@/components/layout/NotificationDropdown"
 
+/**
+ * CreateProject Page Component
+ * Directly integrated with FastAPI backend POST endpoint: http://localhost:8000/projects
+ */
 export function CreateProject() {
   const navigate = useNavigate()
-  const { addProject } = useProject()
+  const { user, addProject } = useProject()
   const [serverError, setServerError] = useState("")
   const [isLoading, setIsLoading] = useState(false)
+
+  const userName = user?.fullName || "Aditya Kumar"
 
   const handleSubmit = async (payload) => {
     setServerError("")
     setIsLoading(true)
 
     try {
-      // API call to POST /projects
+      // 1. Direct integration with POST http://localhost:8000/projects
       const res = await api.post("/projects", payload)
-      const createdProject = res.data.project || res.data
-      addProject(createdProject)
-      navigate("/dashboard")
+      const createdData = res.data?.project || res.data || {}
+
+      // 2. Format created project for global ProjectContext
+      const formattedProject = {
+        id: createdData.project_id || createdData.id || `proj-${Date.now()}`,
+        key: createdData.project_name
+          ? createdData.project_name.substring(0, 3).toUpperCase()
+          : "PRO",
+        name: createdData.project_name || payload.project_name,
+        description: createdData.project_description || payload.project_description || "",
+        category: createdData.category_name || "Development",
+        status: createdData.status_name || "In Progress",
+        createdAt: createdData.created_at
+          ? new Date(createdData.created_at).toLocaleDateString("en-US", {
+              month: "short",
+              day: "numeric",
+              year: "numeric",
+            })
+          : "Just now",
+        tasksCount: 0,
+      }
+
+      if (addProject) {
+        addProject(formattedProject)
+      }
+
+      // 3. Navigate to All Projects view
+      navigate("/projects")
     } catch (err) {
+      console.error("Error creating project via POST http://localhost:8000/projects:", err)
       const errorMsg =
         err.response?.data?.detail
           ? typeof err.response.data.detail === "string"
@@ -36,7 +63,7 @@ export function CreateProject() {
             : Array.isArray(err.response.data.detail)
             ? err.response.data.detail[0]?.msg || "Failed to create project"
             : "Failed to create project"
-          : "Unable to connect to server."
+          : "Unable to connect to http://localhost:8000/projects API."
       setServerError(errorMsg)
     } finally {
       setIsLoading(false)
@@ -44,45 +71,68 @@ export function CreateProject() {
   }
 
   return (
-    <div className="flex-1 flex items-center justify-center p-4 sm:p-6 lg:p-8 bg-gradient-to-b from-background via-background to-secondary/30">
-      <div className="w-full max-w-2xl space-y-6">
-        
-        {/* Navigation back button */}
-        <Link
-          to="/dashboard"
-          className="inline-flex items-center gap-2 text-xs text-muted-foreground hover:text-foreground transition-colors font-medium"
+    <div className="flex-1 py-6 px-4 sm:px-6 lg:px-8 max-w-5xl mx-auto w-full space-y-6 animate-fade-in">
+      
+      {/* Top Header Bar */}
+      <div className="flex items-center justify-between pb-2 border-b border-border/40">
+        <button
+          onClick={() => navigate("/dashboard")}
+          className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground font-semibold transition-colors group cursor-pointer"
         >
-          <ArrowLeft className="h-4 w-4" /> Back to Dashboard
-        </Link>
+          <ArrowLeft className="h-3.5 w-3.5 group-hover:-translate-x-0.5 transition-transform" /> Back to Dashboard
+        </button>
 
-        {/* Card Form */}
-        <Card className="border border-border/80 bg-card shadow-xl rounded-2xl">
-          <CardHeader className="space-y-1 text-center pb-4 border-b border-border/40">
-            <div className="mx-auto h-12 w-12 rounded-xl bg-primary/10 text-primary flex items-center justify-center mb-2">
-              <FolderPlus className="h-6 w-6" />
-            </div>
-            <CardTitle className="text-xl font-bold">Create New Project</CardTitle>
-            <CardDescription className="text-xs">
-              Fill in mandatory (*) and optional fields according to the PostgreSQL tracker schema.
-            </CardDescription>
-          </CardHeader>
+        {/* Right Header Controls */}
+        <div className="flex items-center justify-end gap-3">
+          <NotificationDropdown />
 
-          <CardContent className="pt-6">
-            {serverError && (
-              <div className="mb-4 p-3 rounded-lg bg-destructive/10 border border-destructive/30 text-destructive text-xs flex items-center gap-2">
-                <AlertCircle className="h-4 w-4 shrink-0" />
-                <span>{serverError}</span>
-              </div>
-            )}
+          <button
+            type="button"
+            onClick={() => navigate("/settings")}
+            className="h-9 w-9 rounded-xl border border-border/80 bg-card text-muted-foreground hover:text-foreground flex items-center justify-center transition-colors shadow-xs"
+            title="Settings"
+          >
+            <Settings className="h-4.5 w-4.5" />
+          </button>
 
-            <ProjectForm
-              onSubmit={handleSubmit}
-              isLoading={isLoading}
-              submitLabel="Create Project"
-            />
-          </CardContent>
-        </Card>
+          <div
+            onClick={() => navigate("/profile")}
+            className="flex items-center gap-2 pl-1 cursor-pointer"
+          >
+            <Avatar className="h-9 w-9 border border-blue-500/20 shadow-xs">
+              <AvatarFallback className="bg-blue-600 text-white font-bold text-xs">
+                {userName.split(" ").map((n) => n[0]).join("")}
+              </AvatarFallback>
+            </Avatar>
+          </div>
+        </div>
       </div>
+
+      {/* Page Title */}
+      <div className="space-y-1 text-center py-2">
+        <h1 className="text-3xl font-black tracking-tight text-foreground">
+          Create New Project
+        </h1>
+        <p className="text-xs sm:text-sm text-muted-foreground max-w-xl mx-auto">
+          Initialize your next big endeavor with precise parameters and goals.
+        </p>
+      </div>
+
+      {/* Error Alert */}
+      {serverError && (
+        <div className="max-w-2xl mx-auto p-4 rounded-xl bg-destructive/10 border border-destructive/30 text-destructive text-xs font-semibold flex items-center gap-2">
+          <AlertCircle className="h-4 w-4 shrink-0" />
+          <span>{serverError}</span>
+        </div>
+      )}
+
+      {/* Form Container */}
+      <ProjectForm
+        onSubmit={handleSubmit}
+        isLoading={isLoading}
+        submitLabel="Create Project"
+      />
+
     </div>
   )
 }

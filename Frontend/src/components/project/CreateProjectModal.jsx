@@ -17,16 +17,40 @@ export function CreateProjectModal({ open, onOpenChange, onProjectCreated }) {
     setServerError("")
 
     try {
+      // POST http://localhost:8000/projects
       const res = await api.post("/projects", payload)
-      const newProject = res.data.project || res.data
+      const createdData = res.data?.project || res.data || {}
 
-      addProject(newProject)
+      const formattedProject = {
+        id: createdData.project_id || createdData.id || `proj-${Date.now()}`,
+        key: createdData.project_name
+          ? createdData.project_name.substring(0, 3).toUpperCase()
+          : "PRO",
+        name: createdData.project_name || payload.project_name,
+        description: createdData.project_description || payload.project_description || "",
+        category: createdData.category_name || "Development",
+        status: createdData.status_name || "In Progress",
+        createdAt: createdData.created_at
+          ? new Date(createdData.created_at).toLocaleDateString("en-US", {
+              month: "short",
+              day: "numeric",
+              year: "numeric",
+            })
+          : "Just now",
+        tasksCount: 0,
+      }
+
+      if (addProject) {
+        addProject(formattedProject)
+      }
+
       if (onProjectCreated) {
-        onProjectCreated(newProject)
+        onProjectCreated(formattedProject)
       }
 
       onOpenChange(false)
     } catch (err) {
+      console.error("Error creating project via modal POST /projects:", err)
       const errorMsg =
         err.response?.data?.detail
           ? typeof err.response.data.detail === "string"
@@ -34,7 +58,7 @@ export function CreateProjectModal({ open, onOpenChange, onProjectCreated }) {
             : Array.isArray(err.response.data.detail)
             ? err.response.data.detail[0]?.msg || "Failed to create project"
             : "Failed to create project"
-          : "Unable to connect to backend server."
+          : "Unable to connect to http://localhost:8000/projects API."
       setServerError(errorMsg)
     } finally {
       setIsLoading(false)
@@ -58,14 +82,15 @@ export function CreateProjectModal({ open, onOpenChange, onProjectCreated }) {
           </div>
           <CardTitle className="text-lg font-bold">Create New Project</CardTitle>
           <CardDescription className="text-xs">
-            Enter required project attributes according to backend system schemas.
+            Fill in required details to create a new project in the system.
           </CardDescription>
         </CardHeader>
 
-        <CardContent className="pt-6 max-h-[80vh] overflow-y-auto pr-2">
+        <CardContent className="pt-4">
           {serverError && (
-            <div className="mb-4 p-3 rounded-lg bg-destructive/10 border border-destructive/30 text-destructive text-xs">
-              {serverError}
+            <div className="mb-4 p-3 rounded-lg bg-destructive/10 border border-destructive/30 text-destructive text-xs flex items-center gap-2">
+              <X className="h-4 w-4 shrink-0" />
+              <span>{serverError}</span>
             </div>
           )}
 

@@ -1,25 +1,19 @@
 import React, { useState, useEffect } from "react"
-import { AlertCircle, CheckCircle2, Clock, ListTodo, Loader2 } from "lucide-react"
+import { AlertCircle, Calendar, Info, Layers, Loader2, User } from "lucide-react"
 import api from "@/services/api"
 import { useProject } from "@/context/ProjectContext"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 
+const helperGetId = (item) => item?.id || item?.status_id || item?.priority_id || item?.task_type_id || ""
+const helperGetName = (item) => item?.name || item?.status_name || item?.priority_name || item?.type_name || ""
+
 /**
  * TaskForm Component
- * Fully synced with backend SQLAlchemy model: `tracker.tasks` (app/models/tracker/tasks.py)
- * 
- * FIELD RULES:
- * - project_id: MANDATORY (nullable=False)
- * - title: MANDATORY (nullable=False)
- * - status_id: MANDATORY (nullable=False)
- * - priority_id: MANDATORY (nullable=False)
- * - task_type_id: MANDATORY (nullable=False)
- * - assignee_id: MANDATORY (nullable=False)
- * - due_date: MANDATORY (nullable=False)
- * - description: OPTIONAL (nullable=True)
- * - completed_at: OPTIONAL (nullable=True)
+ * Fully synced with backend PostgreSQL model `tracker.tasks` & FastAPI `TaskCreate` schema.
+ * All mandatory fields feature red asterisks and auto-initialization.
+ * Assignee field shows current user's full_name; UUID is submitted in payload.
  */
 export function TaskForm({
   initialValues = null,
@@ -30,6 +24,11 @@ export function TaskForm({
   onCancel,
 }) {
   const { user } = useProject()
+  const defaultDueDate = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split("T")[0]
+
+  // The user's real UUID from context (stored during login)
+  const currentUserId = user?.id || ""
+  const currentUserName = user?.fullName || user?.full_name || "Current User"
 
   const [lovs, setLovs] = useState({
     statuses: [],
@@ -39,6 +38,8 @@ export function TaskForm({
     categories: [],
   })
 
+  const [lovsLoading, setLovsLoading] = useState(true)
+
   const [formData, setFormData] = useState({
     project_id: projectId || initialValues?.project_id || "",
     title: initialValues?.title || initialValues?.name || "",
@@ -46,8 +47,8 @@ export function TaskForm({
     status_id: initialValues?.status_id || "",
     priority_id: initialValues?.priority_id || "",
     task_type_id: initialValues?.task_type_id || "",
-    assignee_id: initialValues?.assignee_id || user?.id || "",
-    due_date: initialValues?.due_date ? initialValues.due_date.split("T")[0] : (initialValues?.dueDate || ""),
+    assignee_id: initialValues?.assignee_id || currentUserId,
+    due_date: initialValues?.due_date ? initialValues.due_date.split("T")[0] : defaultDueDate,
     completed_at: initialValues?.completed_at ? initialValues.completed_at.split("T")[0] : "",
   })
 
@@ -56,6 +57,7 @@ export function TaskForm({
   // Fetch LOVs when component mounts
   useEffect(() => {
     async function fetchLOVs() {
+      setLovsLoading(true)
       try {
         const res = await api.get("/projects/lov")
         const data = res.data || {}
@@ -69,23 +71,18 @@ export function TaskForm({
 
         setFormData((prev) => ({
           ...prev,
-          status_id: prev.status_id || data.statuses?.[0]?.id || "",
-          priority_id: prev.priority_id || data.priorities?.[0]?.id || "",
-          task_type_id: prev.task_type_id || data.task_types?.[0]?.id || "",
+          status_id: prev.status_id || helperGetId(data.statuses?.[0]) || "",
+          priority_id: prev.priority_id || helperGetId(data.priorities?.[0]) || "",
+          task_type_id: prev.task_type_id || helperGetId(data.task_types?.[0]) || "",
         }))
       } catch (err) {
         console.warn("Failed to fetch LOVs for TaskForm:", err)
+      } finally {
+        setLovsLoading(false)
       }
     }
     fetchLOVs()
   }, [])
-
-  // Keep project_id synced if passed in props
-  useEffect(() => {
-    if (projectId) {
-      setFormData((prev) => ({ ...prev, project_id: projectId }))
-    }
-  }, [projectId])
 
   const handleChange = (e) => {
     const { name, value } = e.target
@@ -98,28 +95,12 @@ export function TaskForm({
   const validate = () => {
     const newErrors = {}
 
-    // Mandatory Field Checks according to tasks.py model
-    if (!formData.title.trim()) {
-      newErrors.title = "Task Title is mandatory."
-    }
-    if (!formData.project_id) {
-      newErrors.project_id = "Project ID selection is mandatory."
-    }
-    if (!formData.status_id) {
-      newErrors.status_id = "Status selection is mandatory."
-    }
-    if (!formData.priority_id) {
-      newErrors.priority_id = "Priority selection is mandatory."
-    }
-    if (!formData.task_type_id) {
-      newErrors.task_type_id = "Task Type selection is mandatory."
-    }
-    if (!formData.assignee_id) {
-      newErrors.assignee_id = "Assignee is mandatory."
-    }
-    if (!formData.due_date) {
-      newErrors.due_date = "Due Date is mandatory."
-    }
+    if (!formData.title.trim()) newErrors.title = "Task Title is mandatory."
+    if (!formData.status_id) newErrors.status_id = "Status selection is mandatory."
+    if (!formData.priority_id) newErrors.priority_id = "Priority selection is mandatory."
+    if (!formData.task_type_id) newErrors.task_type_id = "Task Type selection is mandatory."
+    if (!formData.assignee_id) newErrors.assignee_id = "Assignee is mandatory."
+    if (!formData.due_date) newErrors.due_date = "Due Date is mandatory."
 
     setErrors(newErrors)
     return Object.keys(newErrors).length === 0
@@ -130,7 +111,7 @@ export function TaskForm({
     if (!validate()) return
 
     const payload = {
-      project_id: formData.project_id,
+      project_id: formData.project_id || projectId,
       title: formData.title.trim(),
       description: formData.description.trim() || null,
       status_id: formData.status_id,
@@ -146,222 +127,261 @@ export function TaskForm({
 
   const taskTypesList = lovs.task_types || []
 
+  // Build initials from name
+  const assigneeInitials = currentUserName
+    .split(" ")
+    .map((n) => n[0])
+    .join("")
+    .substring(0, 2)
+    .toUpperCase()
+
   return (
     <form onSubmit={handleSubmit} className="space-y-4 text-xs">
-      
-      {/* Task Title (MANDATORY) */}
-      <div className="space-y-1.5">
-        <div className="flex items-center justify-between">
-          <Label htmlFor="taskTitle" className="text-xs font-semibold">
-            Task Title <span className="text-destructive font-bold">*</span>
-          </Label>
-          <span className="text-[10px] text-destructive font-medium">Mandatory</span>
-        </div>
-        <Input
-          id="taskTitle"
-          name="title"
-          type="text"
-          placeholder="e.g. Implement JWT Authentication Middleware"
-          disabled={isLoading}
-          value={formData.title}
-          onChange={handleChange}
-          className={errors.title ? "border-destructive focus-visible:ring-destructive" : ""}
-        />
-        {errors.title && (
-          <p className="text-[11px] text-destructive flex items-center gap-1">
-            <AlertCircle className="h-3 w-3" /> {errors.title}
-          </p>
-        )}
-      </div>
 
-      {/* Description (NON-MANDATORY / OPTIONAL) */}
-      <div className="space-y-1.5">
-        <div className="flex items-center justify-between">
-          <Label htmlFor="taskDescription" className="text-xs font-semibold">
-            Description
-          </Label>
-          <span className="text-[10px] text-muted-foreground font-normal">Optional</span>
-        </div>
-        <textarea
-          id="taskDescription"
-          name="description"
-          rows={3}
-          placeholder="Detailed task description and requirements..."
-          disabled={isLoading}
-          value={formData.description}
-          onChange={handleChange}
-          className="flex w-full rounded-md border border-input bg-transparent px-3 py-2 text-xs shadow-xs focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring text-foreground resize-none"
-        />
-      </div>
-
-      {/* Grid 1: Status (MANDATORY) & Priority (MANDATORY) */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        <div className="space-y-1.5">
-          <div className="flex items-center justify-between">
-            <Label htmlFor="status_id" className="text-xs font-semibold">
-              Status <span className="text-destructive font-bold">*</span>
-            </Label>
-            <span className="text-[10px] text-muted-foreground">Mandatory</span>
+      {/* SECTION 1: BASIC INFORMATION */}
+      <div className="space-y-3">
+        <div className="flex items-center gap-2 text-blue-600 font-extrabold text-xs">
+          <div className="h-5 w-5 rounded-full bg-blue-500/10 flex items-center justify-center text-blue-600 shrink-0">
+            <Info className="h-3.5 w-3.5 stroke-[2.5]" />
           </div>
-          <select
-            id="status_id"
-            name="status_id"
-            disabled={isLoading}
-            value={formData.status_id}
-            onChange={handleChange}
-            className={`flex h-9 w-full rounded-md border bg-transparent px-3 py-1 text-xs shadow-xs focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring text-foreground ${
-              errors.status_id ? "border-destructive" : "border-input"
-            }`}
-          >
-            <option value="" disabled>Select Status</option>
-            {(lovs.statuses || []).map((s) => (
-              <option key={s.id} value={s.id}>
-                {s.name}
-              </option>
-            ))}
-          </select>
-          {errors.status_id && <p className="text-[11px] text-destructive">{errors.status_id}</p>}
+          <span>Basic Information</span>
         </div>
 
-        <div className="space-y-1.5">
+        {/* Task Title */}
+        <div className="space-y-1">
           <div className="flex items-center justify-between">
-            <Label htmlFor="priority_id" className="text-xs font-semibold">
-              Priority <span className="text-destructive font-bold">*</span>
+            <Label htmlFor="taskTitle" className="text-xs font-bold text-foreground">
+              Task Title <span className="text-red-500 font-bold">*</span>
             </Label>
-            <span className="text-[10px] text-muted-foreground">Mandatory</span>
-          </div>
-          <select
-            id="priority_id"
-            name="priority_id"
-            disabled={isLoading}
-            value={formData.priority_id}
-            onChange={handleChange}
-            className={`flex h-9 w-full rounded-md border bg-transparent px-3 py-1 text-xs shadow-xs focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring text-foreground ${
-              errors.priority_id ? "border-destructive" : "border-input"
-            }`}
-          >
-            <option value="" disabled>Select Priority</option>
-            {(lovs.priorities || []).map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.name}
-              </option>
-            ))}
-          </select>
-          {errors.priority_id && <p className="text-[11px] text-destructive">{errors.priority_id}</p>}
-        </div>
-      </div>
-
-      {/* Grid 2: Task Type (MANDATORY) & Assignee (MANDATORY) */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        <div className="space-y-1.5">
-          <div className="flex items-center justify-between">
-            <Label htmlFor="task_type_id" className="text-xs font-semibold">
-              Task Type <span className="text-destructive font-bold">*</span>
-            </Label>
-            <span className="text-[10px] text-muted-foreground">Mandatory</span>
-          </div>
-          <select
-            id="task_type_id"
-            name="task_type_id"
-            disabled={isLoading}
-            value={formData.task_type_id}
-            onChange={handleChange}
-            className={`flex h-9 w-full rounded-md border bg-transparent px-3 py-1 text-xs shadow-xs focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring text-foreground ${
-              errors.task_type_id ? "border-destructive" : "border-input"
-            }`}
-          >
-            <option value="" disabled>Select Task Type</option>
-            {taskTypesList.length > 0 ? (
-              taskTypesList.map((pt) => (
-                <option key={pt.id} value={pt.id}>
-                  {pt.name}
-                </option>
-              ))
-            ) : (
-              <option value={user?.id || "default-type"}>Feature Task</option>
-            )}
-          </select>
-          {errors.task_type_id && <p className="text-[11px] text-destructive">{errors.task_type_id}</p>}
-        </div>
-
-        <div className="space-y-1.5">
-          <div className="flex items-center justify-between">
-            <Label htmlFor="assignee_id" className="text-xs font-semibold">
-              Assignee <span className="text-destructive font-bold">*</span>
-            </Label>
-            <span className="text-[10px] text-muted-foreground">Mandatory</span>
+            <span className="text-[11px] font-bold text-red-500">* Required</span>
           </div>
           <Input
-            id="assignee_id"
-            name="assignee_id"
+            id="taskTitle"
+            name="title"
             type="text"
-            placeholder="Assignee User ID"
+            placeholder="e.g. Implement JWT Authentication Middleware"
             disabled={isLoading}
-            value={formData.assignee_id}
+            value={formData.title}
             onChange={handleChange}
-            className={errors.assignee_id ? "border-destructive" : ""}
+            className={`h-9 text-xs rounded-lg bg-muted/20 border-border/80 focus-visible:ring-blue-600 ${
+              errors.title ? "border-red-500" : ""
+            }`}
           />
-          {errors.assignee_id && <p className="text-[11px] text-destructive">{errors.assignee_id}</p>}
-        </div>
-      </div>
-
-      {/* Grid 3: Due Date (MANDATORY) & Completed At (OPTIONAL) */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        <div className="space-y-1.5">
-          <div className="flex items-center justify-between">
-            <Label htmlFor="due_date" className="text-xs font-semibold">
-              Due Date <span className="text-destructive font-bold">*</span>
-            </Label>
-            <span className="text-[10px] text-muted-foreground">Mandatory</span>
-          </div>
-          <Input
-            id="due_date"
-            name="due_date"
-            type="date"
-            disabled={isLoading}
-            value={formData.due_date}
-            onChange={handleChange}
-            className={errors.due_date ? "border-destructive" : ""}
-          />
-          {errors.due_date && <p className="text-[11px] text-destructive">{errors.due_date}</p>}
+          {errors.title && (
+            <p className="text-[11px] text-red-500 font-semibold flex items-center gap-1">
+              <AlertCircle className="h-3 w-3" /> {errors.title}
+            </p>
+          )}
         </div>
 
-        <div className="space-y-1.5">
-          <div className="flex items-center justify-between">
-            <Label htmlFor="completed_at" className="text-xs font-semibold text-muted-foreground">
-              Completed At
-            </Label>
-            <span className="text-[10px] text-muted-foreground font-normal">Optional</span>
-          </div>
-          <Input
-            id="completed_at"
-            name="completed_at"
-            type="date"
+        {/* Task Description */}
+        <div className="space-y-1">
+          <Label htmlFor="taskDescription" className="text-xs font-bold text-foreground">
+            Task Description (Optional)
+          </Label>
+          <textarea
+            id="taskDescription"
+            name="description"
+            rows={2}
+            placeholder="Detailed task description..."
             disabled={isLoading}
-            value={formData.completed_at}
+            value={formData.description}
             onChange={handleChange}
+            className="flex w-full rounded-lg border border-border/80 bg-muted/20 px-3 py-2 text-xs shadow-xs focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-blue-600 text-foreground resize-none"
           />
         </div>
       </div>
 
-      {/* Form Action Buttons */}
-      <div className="flex gap-3 pt-3 border-t border-border/40">
+      <div className="border-t border-border/60" />
+
+      {/* SECTION 2: CLASSIFICATION & ASSIGNEE */}
+      <div className="space-y-3">
+        <div className="flex items-center gap-2 text-blue-600 font-extrabold text-xs">
+          <div className="h-5 w-5 rounded-full bg-blue-500/10 flex items-center justify-center text-blue-600 shrink-0">
+            <Layers className="h-3.5 w-3.5 stroke-[2.5]" />
+          </div>
+          <span>Classification &amp; Assignee</span>
+          {lovsLoading && <Loader2 className="h-3.5 w-3.5 animate-spin text-blue-600 ml-auto" />}
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          {/* Status */}
+          <div className="space-y-1">
+            <Label htmlFor="status_id" className="text-xs font-bold text-foreground">
+              Status <span className="text-red-500 font-bold">*</span>
+            </Label>
+            <select
+              id="status_id"
+              name="status_id"
+              disabled={isLoading || lovsLoading}
+              value={formData.status_id}
+              onChange={handleChange}
+              className={`flex h-9 w-full rounded-lg border bg-muted/20 px-3 text-xs font-semibold focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-blue-600 text-foreground ${
+                errors.status_id ? "border-red-500" : "border-border/80"
+              }`}
+            >
+              <option value="" disabled>Select Status</option>
+              {(lovs.statuses || []).map((s) => (
+                <option key={helperGetId(s)} value={helperGetId(s)}>
+                  {helperGetName(s)}
+                </option>
+              ))}
+            </select>
+            {errors.status_id && <p className="text-[11px] text-red-500 font-semibold">{errors.status_id}</p>}
+          </div>
+
+          {/* Priority */}
+          <div className="space-y-1">
+            <Label htmlFor="priority_id" className="text-xs font-bold text-foreground">
+              Priority <span className="text-red-500 font-bold">*</span>
+            </Label>
+            <select
+              id="priority_id"
+              name="priority_id"
+              disabled={isLoading || lovsLoading}
+              value={formData.priority_id}
+              onChange={handleChange}
+              className={`flex h-9 w-full rounded-lg border bg-muted/20 px-3 text-xs font-semibold focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-blue-600 text-foreground ${
+                errors.priority_id ? "border-red-500" : "border-border/80"
+              }`}
+            >
+              <option value="" disabled>Select Priority</option>
+              {(lovs.priorities || []).map((p) => (
+                <option key={helperGetId(p)} value={helperGetId(p)}>
+                  {helperGetName(p)}
+                </option>
+              ))}
+            </select>
+            {errors.priority_id && <p className="text-[11px] text-red-500 font-semibold">{errors.priority_id}</p>}
+          </div>
+
+          {/* Task Type */}
+          <div className="space-y-1">
+            <Label htmlFor="task_type_id" className="text-xs font-bold text-foreground">
+              Task Type <span className="text-red-500 font-bold">*</span>
+            </Label>
+            <select
+              id="task_type_id"
+              name="task_type_id"
+              disabled={isLoading || lovsLoading}
+              value={formData.task_type_id}
+              onChange={handleChange}
+              className={`flex h-9 w-full rounded-lg border bg-muted/20 px-3 text-xs font-semibold focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-blue-600 text-foreground ${
+                errors.task_type_id ? "border-red-500" : "border-border/80"
+              }`}
+            >
+              <option value="" disabled>Select Task Type</option>
+              {taskTypesList.map((pt) => (
+                <option key={helperGetId(pt)} value={helperGetId(pt)}>
+                  {helperGetName(pt)}
+                </option>
+              ))}
+            </select>
+            {errors.task_type_id && <p className="text-[11px] text-red-500 font-semibold">{errors.task_type_id}</p>}
+          </div>
+
+          {/* Assignee — displays name, UUID stays in hidden field */}
+          <div className="space-y-1">
+            <Label htmlFor="assignee_display" className="text-xs font-bold text-foreground">
+              Assignee <span className="text-red-500 font-bold">*</span>
+            </Label>
+            <div
+              className={`flex h-9 w-full items-center gap-2 rounded-lg border bg-muted/30 px-3 text-xs font-semibold text-foreground ${
+                errors.assignee_id ? "border-red-500" : "border-border/80"
+              }`}
+            >
+              {/* Colored initials badge */}
+              <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-blue-600 text-[9px] font-black text-white leading-none">
+                {assigneeInitials}
+              </div>
+              <span className="flex-1 truncate">{currentUserName}</span>
+              <User className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+            </div>
+            {/* Hidden input carries actual UUID for payload */}
+            <input type="hidden" name="assignee_id" value={formData.assignee_id} />
+            {errors.assignee_id && <p className="text-[11px] text-red-500 font-semibold">{errors.assignee_id}</p>}
+          </div>
+        </div>
+      </div>
+
+      <div className="border-t border-border/60" />
+
+      {/* SECTION 3: TIMELINE & DUE DATE */}
+      <div className="space-y-3">
+        <div className="flex items-center gap-2 text-blue-600 font-extrabold text-xs">
+          <div className="h-5 w-5 rounded-full bg-blue-500/10 flex items-center justify-center text-blue-600 shrink-0">
+            <Calendar className="h-3.5 w-3.5 stroke-[2.5]" />
+          </div>
+          <span>Timeline &amp; Dates</span>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          {/* Due Date */}
+          <div className="space-y-1">
+            <Label htmlFor="due_date" className="text-xs font-bold text-foreground">
+              Due Date <span className="text-red-500 font-bold">*</span>
+            </Label>
+            <Input
+              id="due_date"
+              name="due_date"
+              type="date"
+              disabled={isLoading}
+              value={formData.due_date}
+              onChange={handleChange}
+              className={`h-9 text-xs rounded-lg bg-muted/20 border-border/80 focus-visible:ring-blue-600 ${
+                errors.due_date ? "border-red-500" : ""
+              }`}
+            />
+            {errors.due_date && <p className="text-[11px] text-red-500 font-semibold">{errors.due_date}</p>}
+          </div>
+
+          {/* Completion Date */}
+          <div className="space-y-1">
+            <Label htmlFor="completed_at" className="text-xs font-bold text-foreground">
+              Completed Date (Optional)
+            </Label>
+            <Input
+              id="completed_at"
+              name="completed_at"
+              type="date"
+              disabled={isLoading}
+              value={formData.completed_at}
+              onChange={handleChange}
+              className="h-9 text-xs rounded-lg bg-muted/20 border-border/80 focus-visible:ring-blue-600"
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* Form Submission Footer */}
+      <div className="pt-3 border-t border-border/60 flex items-center justify-end gap-2.5">
         {onCancel && (
-          <Button type="button" variant="outline" size="sm" onClick={onCancel} disabled={isLoading} className="w-1/2">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={onCancel}
+            disabled={isLoading}
+            className="h-9 px-4 font-bold text-xs rounded-lg"
+          >
             Cancel
           </Button>
         )}
-        <Button type="submit" size="sm" disabled={isLoading} className={`${onCancel ? "w-1/2" : "w-full"} font-semibold shadow-xs`}>
+
+        <Button
+          type="submit"
+          disabled={isLoading || lovsLoading}
+          className="h-9 px-6 font-bold text-xs rounded-lg bg-blue-600 text-white hover:bg-blue-700 shadow-xs cursor-pointer"
+        >
           {isLoading ? (
             <>
-              <Loader2 className="h-4 w-4 animate-spin mr-1" />
-              Saving...
+              <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> Saving...
             </>
           ) : (
             submitLabel
           )}
         </Button>
       </div>
+
     </form>
   )
 }

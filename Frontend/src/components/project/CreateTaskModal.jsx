@@ -38,22 +38,22 @@ export function CreateTaskModal({ open, onOpenChange, onCreateTask, projectId, p
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 animate-in fade-in duration-150 overflow-y-auto">
-      <Card className="w-full max-w-lg border border-border/80 bg-card shadow-2xl rounded-2xl relative my-8 animate-in zoom-in-95 duration-150">
+      <Card className="w-full max-w-lg border border-border/80 bg-card shadow-2xl rounded-2xl relative my-8 animate-in zoom-in-95 duration-150 overflow-hidden">
         <button
           onClick={() => onOpenChange(false)}
-          className="absolute right-4 top-4 text-muted-foreground hover:text-foreground cursor-pointer"
+          className="absolute right-4 top-4 text-muted-foreground hover:text-foreground cursor-pointer z-10"
           disabled={isLoading}
         >
           <X className="h-4 w-4" />
         </button>
 
-        <CardHeader className="pb-3 border-b border-border/40">
-          <CardTitle className="text-lg font-bold flex items-center gap-2">
-            <Plus className="h-5 w-5 text-primary" /> Create New Task
+        <CardHeader className="pb-3 border-b border-border/40 px-5">
+          <CardTitle className="text-base font-bold flex items-center gap-2">
+            <Plus className="h-4 w-4 text-primary" /> Create New Task
           </CardTitle>
         </CardHeader>
 
-        <CardContent className="pt-4 max-h-[80vh] overflow-y-auto pr-1">
+        <CardContent className="pt-4 px-5 pb-5 max-h-[80vh] overflow-y-auto">
           {error && (
             <div className="mb-3 p-2.5 rounded-lg bg-destructive/10 border border-destructive/30 text-destructive text-xs">
               {error}
