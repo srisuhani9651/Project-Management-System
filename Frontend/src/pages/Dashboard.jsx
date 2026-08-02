@@ -6,7 +6,7 @@ import api from "@/services/api"
 import { ProjectTaskPieChart } from "@/components/dashboard/ProjectTaskPieChart"
 import { PendingTasksList } from "@/components/dashboard/PendingTasksList"
 import { TimebasedAnalytics } from "@/components/dashboard/TimebasedAnalytics"
-import { ProductivityInsights } from "@/components/dashboard/ProductivityInsights"
+import { RecentTasksList } from "@/components/dashboard/RecentTasksList"
 
 /**
  * Modern Dynamic Dashboard Page Component
@@ -116,7 +116,7 @@ export function Dashboard() {
 
   return (
     <div className="flex-1 pb-16 pt-6 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto w-full space-y-8 animate-fade-in font-roboto">
-      
+
       {/* 1. Clean Header Greeting */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-border/50 pb-5">
         <div className="space-y-1">
@@ -131,7 +131,7 @@ export function Dashboard() {
 
       {/* 2. SECTION 1: Pending Tasks List + Project Task Distribution Pie Chart */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
-        
+
         {/* Left Column (6 cols): Pending Tasks List */}
         <div className="lg:col-span-6 flex">
           <PendingTasksList
@@ -155,7 +155,7 @@ export function Dashboard() {
 
       {/* 3. SECTION 2: Time-Based Past Analytics + Duration-Based Productivity Insights */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
-        
+
         {/* Left Column (6 cols): Time-Based Past Analytics */}
         <div className="lg:col-span-6 flex">
           <TimebasedAnalytics
@@ -165,11 +165,12 @@ export function Dashboard() {
           />
         </div>
 
-        {/* Right Column (6 cols): Productivity Insights */}
+        {/* Right Column (6 cols): Recently Created / Updated Tasks */}
         <div className="lg:col-span-6 flex">
-          <ProductivityInsights
-            insightsData={telemetry?.productivityInsights}
-            title="Productivity Insights (Time Duration)"
+          <RecentTasksList
+            recentData={telemetry?.recentTasks}
+            recentTasks={telemetry?.recentTasks?.tasks}
+            title="Recent Tasks"
             loading={loading}
           />
         </div>
