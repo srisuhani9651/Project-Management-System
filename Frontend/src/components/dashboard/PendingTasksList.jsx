@@ -3,9 +3,7 @@ import { useNavigate } from "react-router-dom"
 import { 
   CheckCircle2, 
   Clock, 
-  AlertCircle, 
   ChevronRight, 
-  Filter,
   CheckCircle,
   CircleDot,
   Calendar
@@ -13,14 +11,12 @@ import {
 
 /**
  * PendingTasksList Component
- * Modern, interactive list view displaying pending user tasks with priority filters,
- * status badges, due date urgency highlights, and quick complete triggers.
+ * Refined font weights: Poppins for titles, Roboto for item content.
  */
 export function PendingTasksList({ tasks = [], onToggleTaskStatus, title = "Pending Tasks" }) {
   const navigate = useNavigate()
-  const [filter, setFilter] = useState("all") // 'all', 'todo', 'in_progress', 'high_priority'
+  const [filter, setFilter] = useState("all")
 
-  // Default mock pending tasks if none passed
   const defaultTasks = [
     {
       id: "task-101",
@@ -66,7 +62,6 @@ export function PendingTasksList({ tasks = [], onToggleTaskStatus, title = "Pend
 
   const displayTasks = tasks.length > 0 ? tasks : defaultTasks
 
-  // Filter tasks
   const pendingTasks = displayTasks.filter((t) => {
     const status = (t.status || "").toLowerCase()
     return status !== "done" && status !== "completed"
@@ -89,7 +84,7 @@ export function PendingTasksList({ tasks = [], onToggleTaskStatus, title = "Pend
   }
 
   return (
-    <div className="flex flex-col justify-between p-5 rounded-2xl border border-border/80 bg-card hover:shadow-lg transition-all space-y-4 w-full h-full">
+    <div className="flex flex-col justify-between p-5 rounded-2xl border border-border/80 bg-card hover:shadow-md transition-all space-y-4 w-full h-full font-roboto">
       
       {/* Header & Filter Tabs */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-border/60 pb-3">
@@ -99,9 +94,9 @@ export function PendingTasksList({ tasks = [], onToggleTaskStatus, title = "Pend
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <h3 className="text-sm font-black text-foreground">{title}</h3>
-              <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-500/10 text-rose-600 border border-rose-500/20">
-                {pendingTasks.length} Action Needed
+              <h3 className="font-poppins text-sm font-semibold text-foreground">{title}</h3>
+              <span className="font-poppins px-2 py-0.5 rounded-full text-[10px] font-semibold bg-rose-500/10 text-rose-600 border border-rose-500/20">
+                {pendingTasks.length} Pending
               </span>
             </div>
             <p className="text-[11px] text-muted-foreground">Tasks requiring your attention</p>
@@ -109,7 +104,7 @@ export function PendingTasksList({ tasks = [], onToggleTaskStatus, title = "Pend
         </div>
 
         {/* Filter Pills */}
-        <div className="flex items-center gap-1 bg-muted/60 p-1 rounded-xl overflow-x-auto">
+        <div className="flex items-center gap-1 bg-muted/50 p-1 rounded-xl overflow-x-auto">
           {[
             { id: "all", label: "All" },
             { id: "in_progress", label: "In Progress" },
@@ -119,9 +114,9 @@ export function PendingTasksList({ tasks = [], onToggleTaskStatus, title = "Pend
             <button
               key={tab.id}
               onClick={() => setFilter(tab.id)}
-              className={`px-2.5 py-1 rounded-lg text-[11px] font-bold whitespace-nowrap transition-all ${
+              className={`px-2.5 py-1 rounded-lg text-[11px] font-medium whitespace-nowrap transition-all ${
                 filter === tab.id
-                  ? "bg-card text-foreground shadow-xs border border-border/50"
+                  ? "bg-card text-foreground shadow-xs border border-border/50 font-semibold"
                   : "text-muted-foreground hover:text-foreground"
               }`}
             >
@@ -132,11 +127,11 @@ export function PendingTasksList({ tasks = [], onToggleTaskStatus, title = "Pend
       </div>
 
       {/* Task List Items */}
-      <div className="space-y-3 my-auto overflow-y-auto max-h-[300px] pr-1">
+      <div className="space-y-2.5 my-auto overflow-y-auto max-h-[300px] pr-1">
         {filteredTasks.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-8 text-center space-y-2">
             <CheckCircle2 className="h-8 w-8 text-emerald-500 stroke-[1.5]" />
-            <p className="text-xs font-bold text-foreground">No pending tasks matching this filter!</p>
+            <p className="font-poppins text-xs font-semibold text-foreground">No pending tasks matching this filter!</p>
             <p className="text-[11px] text-muted-foreground">You are all caught up.</p>
           </div>
         ) : (
@@ -163,24 +158,24 @@ export function PendingTasksList({ tasks = [], onToggleTaskStatus, title = "Pend
                   </button>
 
                   <div className="space-y-1 min-w-0">
-                    <h4 className="text-xs font-extrabold text-foreground group-hover:text-blue-600 transition-colors line-clamp-1">
+                    <h4 className="text-xs font-medium text-foreground group-hover:text-blue-600 transition-colors line-clamp-1">
                       {task.title}
                     </h4>
 
                     <div className="flex flex-wrap items-center gap-2 text-[10px]">
                       {/* Project Tag */}
-                      <span className="font-bold bg-muted px-2 py-0.5 rounded-md text-muted-foreground">
+                      <span className="font-medium bg-muted px-2 py-0.5 rounded-md text-muted-foreground">
                         {task.projectName || task.projectKey || "Project"}
                       </span>
 
                       {/* Priority Tag */}
-                      <span className={`font-extrabold px-2 py-0.5 rounded-md border ${priorityBadgeStyle(task.priority)}`}>
+                      <span className={`font-semibold px-2 py-0.5 rounded-md border ${priorityBadgeStyle(task.priority)}`}>
                         {task.priority || "Medium"}
                       </span>
 
                       {/* Due Date */}
                       {task.dueDate && (
-                        <span className={`flex items-center gap-1 font-semibold ${task.urgent ? "text-rose-600 font-bold" : "text-muted-foreground"}`}>
+                        <span className={`flex items-center gap-1 ${task.urgent ? "text-rose-600 font-semibold" : "text-muted-foreground"}`}>
                           <Calendar className="h-3 w-3" />
                           {task.dueDate}
                         </span>
@@ -210,7 +205,7 @@ export function PendingTasksList({ tasks = [], onToggleTaskStatus, title = "Pend
         <button
           type="button"
           onClick={() => navigate("/projects")}
-          className="text-xs font-bold text-blue-600 hover:text-blue-700 transition-colors inline-flex items-center gap-1 cursor-pointer"
+          className="font-poppins text-xs font-semibold text-blue-600 hover:text-blue-700 transition-colors inline-flex items-center gap-1 cursor-pointer"
         >
           View All Tasks <ChevronRight className="h-3.5 w-3.5" />
         </button>
