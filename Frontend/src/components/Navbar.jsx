@@ -8,8 +8,8 @@ export function Navbar() {
   const navigate = useNavigate()
   const { user, logoutUser } = useProject()
 
-  const handleLogout = () => {
-    logoutUser()
+  const handleLogout = async () => {
+    await logoutUser()
     navigate("/")
   }
 

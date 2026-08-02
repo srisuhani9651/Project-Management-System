@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from "react"
+import api from "@/services/api"
 
 const ProjectContext = createContext()
 
@@ -37,31 +38,84 @@ export function ProjectProvider({ children }) {
   }
 
   const loginUser = (userData) => {
+    const token = userData.token || userData.access_token
+    if (token) {
+      localStorage.setItem("pf_token", token)
+    }
     const fullUserData = {
-      id: userData.id || `usr-${Date.now()}`,
-      fullName: userData.fullName,
+      id: userData.id || userData.user_id || `usr-${Date.now()}`,
+      fullName: userData.fullName || userData.full_name,
       email: userData.email,
+      token: token,
     }
     setUser(fullUserData)
   }
 
-  const logoutUser = () => {
-    setUser(null)
+  const logoutUser = async () => {
+    try {
+      await api.post("/logout")
+    } catch (err) {
+      console.warn("Logout API call warning:", err?.response?.data?.detail || err.message)
+    } finally {
+      localStorage.removeItem("pf_token")
+      localStorage.removeItem("pf_user")
+      setUser(null)
+    }
   }
+
+  const fetchProjects = async () => {
+    try {
+      const res = await api.get("/projects")
+      const formatted = res.data.map((p) => ({
+        id: p.project_id,
+        key: p.project_name.substring(0, 3).toUpperCase(),
+        name: p.project_name,
+        description: p.project_description || "No description provided.",
+        category: p.category_name || "Development",
+        status: p.status_name || "In Progress",
+        priority: p.priority_name || "Medium",
+        projectType: p.project_type_name || "Team",
+        plannedStartDate: p.planned_start_date,
+        plannedEndDate: p.planned_end_date,
+        estimatedDuration: p.estimated_duration,
+        totalTasks: 0,
+        completedTasks: 0,
+        pendingTasks: 0,
+        createdAt: p.created_at
+          ? new Date(p.created_at).toLocaleDateString("en-US", {
+              month: "short",
+              day: "numeric",
+              year: "numeric",
+            })
+          : "Aug 1, 2026",
+      }))
+      setProjects(formatted)
+    } catch (err) {
+      console.warn("Failed to fetch projects from backend:", err)
+    }
+  }
+
+  useEffect(() => {
+    if (user && localStorage.getItem("pf_token")) {
+      fetchProjects()
+    }
+  }, [user])
 
   const addProject = (projectData) => {
     const newProject = {
-      id: `proj-${Date.now()}`,
-      key: projectData.key || projectData.name.substring(0, 3).toUpperCase(),
-      name: projectData.name,
-      description: projectData.description || "No description provided.",
-      category: projectData.category || "Software Development",
+      id: projectData.project_id || `proj-${Date.now()}`,
+      key: (projectData.name || projectData.project_name || "").substring(0, 3).toUpperCase(),
+      name: projectData.name || projectData.project_name,
+      description: projectData.description || projectData.project_description || "No description provided.",
+      category: projectData.category || projectData.category_name || "Development",
+      status: projectData.status || projectData.status_name || "In Progress",
+      priority: projectData.priority || projectData.priority_name || "Medium",
+      projectType: projectData.projectType || projectData.project_type_name || "Team",
       ownerId: user?.id || "usr-current",
       members: [user?.id || "usr-current"],
-      status: "Active",
-      totalTasks: projectData.totalTasks || 0,
-      completedTasks: projectData.completedTasks || 0,
-      pendingTasks: projectData.pendingTasks || 0,
+      totalTasks: 0,
+      completedTasks: 0,
+      pendingTasks: 0,
       createdAt: new Date().toLocaleDateString("en-US", {
         month: "short",
         day: "numeric",

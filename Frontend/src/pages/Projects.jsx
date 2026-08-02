@@ -131,26 +131,9 @@ export function Projects() {
       {projects.length > 0 ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredProjects.length > 0 ? (
-            <>
-              {filteredProjects.map((proj) => (
-                <ProjectCard key={proj.id} project={proj} />
-              ))}
-
-              {/* Add Project Card Tile */}
-              <button
-                type="button"
-                onClick={() => navigate("/projects/create")}
-                className="border border-dashed border-border/80 hover:border-primary/60 bg-card/40 hover:bg-primary/5 rounded-xl p-6 flex flex-col items-center justify-center space-y-2 text-center transition-all group min-h-[190px]"
-              >
-                <div className="h-10 w-10 rounded-full bg-primary/10 text-primary flex items-center justify-center group-hover:scale-110 transition-transform shadow-xs">
-                  <Plus className="h-5 w-5 stroke-[2.5]" />
-                </div>
-                <p className="text-sm font-bold text-foreground group-hover:text-primary transition-colors">
-                  Create New Project
-                </p>
-                <p className="text-xs text-muted-foreground">Add a new workspace to organize tasks</p>
-              </button>
-            </>
+            filteredProjects.map((proj) => (
+              <ProjectCard key={proj.id} project={proj} />
+            ))
           ) : (
             <div className="col-span-full py-12 text-center text-xs text-muted-foreground border border-dashed rounded-xl">
               No projects match your search or filter criteria.

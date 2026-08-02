@@ -1,7 +1,8 @@
-import React, { useState } from "react"
+import React, { useState, useEffect } from "react"
 import { useNavigate, Link } from "react-router-dom"
-import { FolderPlus, ArrowLeft, AlertCircle } from "lucide-react"
+import { FolderPlus, ArrowLeft, AlertCircle, Loader2 } from "lucide-react"
 import { useProject } from "@/context/ProjectContext"
+import api from "@/services/api"
 import { Button } from "@/components/ui/button"
 import {
   Card,
@@ -17,59 +18,104 @@ export function CreateProject() {
   const navigate = useNavigate()
   const { addProject } = useProject()
 
-  const [formData, setFormData] = useState({
-    name: "",
-    key: "",
-    category: "Software Development",
-    description: "",
+  const [lovs, setLovs] = useState({
+    categories: [],
+    priorities: [],
+    project_types: [],
+    statuses: [],
   })
 
-  const [error, setError] = useState("")
+  const [formData, setFormData] = useState({
+    project_name: "",
+    project_description: "",
+    category_id: "",
+    priority_id: "",
+    project_type_id: "",
+    status_id: "",
+    planned_start_date: "",
+    planned_end_date: "",
+    estimated_duration: "",
+  })
+
+  const [errors, setErrors] = useState({})
+  const [isLoading, setIsLoading] = useState(false)
+
+  // Fetch LOVs from database on mount
+  useEffect(() => {
+    async function fetchLOVs() {
+      try {
+        const res = await api.get("/projects/lov")
+        setLovs(res.data)
+        if (res.data.categories?.length > 0) {
+          setFormData((prev) => ({ ...prev, category_id: res.data.categories[0].id }))
+        }
+        if (res.data.priorities?.length > 0) {
+          setFormData((prev) => ({ ...prev, priority_id: res.data.priorities[0].id }))
+        }
+        if (res.data.project_types?.length > 0) {
+          setFormData((prev) => ({ ...prev, project_type_id: res.data.project_types[0].id }))
+        }
+        if (res.data.statuses?.length > 0) {
+          setFormData((prev) => ({ ...prev, status_id: res.data.statuses[0].id }))
+        }
+      } catch (err) {
+        console.warn("Failed to load LOVs:", err)
+      }
+    }
+    fetchLOVs()
+  }, [])
 
   const handleChange = (e) => {
     const { name, value } = e.target
-    setFormData((prev) => {
-      const updated = { ...prev, [name]: value }
-      // Auto-generate key if user changes project name
-      if (name === "name" && !prev.keyTouched) {
-        updated.key = value.trim().substring(0, 3).toUpperCase()
-      }
-      return updated
-    })
-    if (error) setError("")
+    setFormData((prev) => ({ ...prev, [name]: value }))
+    if (errors[name]) {
+      setErrors((prev) => ({ ...prev, [name]: "" }))
+    }
   }
 
-  const handleKeyChange = (e) => {
-    setFormData((prev) => ({
-      ...prev,
-      key: e.target.value.toUpperCase().slice(0, 4),
-      keyTouched: true,
-    }))
-  }
-
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault()
-    if (!formData.name.trim()) {
-      setError("Project name is required.")
+    if (!formData.project_name.trim()) {
+      setErrors({ project_name: "Project name is required." })
       return
     }
 
-    addProject({
-      name: formData.name.trim(),
-      key: formData.key || formData.name.trim().substring(0, 3).toUpperCase(),
-      category: formData.category,
-      description: formData.description.trim(),
-      totalTasks: 0,
-      completedTasks: 0,
-      pendingTasks: 0,
-    })
+    setErrors({})
+    setIsLoading(true)
 
-    navigate("/dashboard")
+    try {
+      const payload = {
+        project_name: formData.project_name.trim(),
+        project_description: formData.project_description.trim() || null,
+        category_id: formData.category_id || null,
+        priority_id: formData.priority_id || null,
+        project_type_id: formData.project_type_id || null,
+        status_id: formData.status_id || null,
+        planned_start_date: formData.planned_start_date ? new Date(formData.planned_start_date).toISOString() : null,
+        planned_end_date: formData.planned_end_date ? new Date(formData.planned_end_date).toISOString() : null,
+        estimated_duration: formData.estimated_duration ? parseInt(formData.estimated_duration, 10) : null,
+      }
+
+      const res = await api.post("/projects", payload)
+      addProject(res.data.project)
+      navigate("/dashboard")
+    } catch (err) {
+      const errorMsg =
+        err.response?.data?.detail
+          ? typeof err.response.data.detail === "string"
+            ? err.response.data.detail
+            : Array.isArray(err.response.data.detail)
+            ? err.response.data.detail[0]?.msg || "Failed to create project"
+            : "Failed to create project"
+          : "Unable to connect to server."
+      setErrors({ server: errorMsg })
+      setIsLoading(false)
+    }
   }
 
   return (
     <div className="flex-1 flex items-center justify-center p-4 sm:p-6 lg:p-8 bg-gradient-to-b from-background via-background to-secondary/30">
-      <div className="w-full max-w-lg space-y-6">
+      <div className="w-full max-w-xl space-y-6">
         
         {/* Navigation back button */}
         <Link
@@ -87,89 +133,191 @@ export function CreateProject() {
             </div>
             <CardTitle className="text-xl font-bold">Create New Project</CardTitle>
             <CardDescription>
-              Set up a new workspace project to organize issues and tasks.
+              Set up a new workspace project with database classification.
             </CardDescription>
           </CardHeader>
 
           <CardContent className="pt-6">
+            {errors.server && (
+              <div className="mb-4 p-3 rounded-lg bg-destructive/10 border border-destructive/30 text-destructive text-sm flex items-center gap-2">
+                <AlertCircle className="h-4 w-4 shrink-0" />
+                <span>{errors.server}</span>
+              </div>
+            )}
+
             <form onSubmit={handleSubmit} className="space-y-4">
               
               {/* Project Name */}
               <div className="space-y-2">
-                <Label htmlFor="name">Project Name *</Label>
+                <Label htmlFor="project_name">Project Name *</Label>
                 <Input
-                  id="name"
-                  name="name"
+                  id="project_name"
+                  name="project_name"
                   type="text"
                   placeholder="e.g. NextGen Web Portal"
-                  value={formData.name}
+                  disabled={isLoading}
+                  value={formData.project_name}
                   onChange={handleChange}
-                  className={error ? "border-destructive focus-visible:ring-destructive" : ""}
+                  className={errors.project_name ? "border-destructive focus-visible:ring-destructive" : ""}
                 />
-                {error && (
+                {errors.project_name && (
                   <p className="text-xs text-destructive flex items-center gap-1">
-                    <AlertCircle className="h-3 w-3" /> {error}
+                    <AlertCircle className="h-3 w-3" /> {errors.project_name}
                   </p>
                 )}
               </div>
 
-              {/* Project Key */}
-              <div className="space-y-2">
-                <Label htmlFor="key">Project Key (Short Identifier)</Label>
-                <Input
-                  id="key"
-                  name="key"
-                  type="text"
-                  placeholder="e.g. NWP"
-                  value={formData.key}
-                  onChange={handleKeyChange}
-                  maxLength={4}
-                />
-                <p className="text-[11px] text-muted-foreground">
-                  Used as prefix for issue codes (e.g. NWP-101)
-                </p>
+              {/* Grid 1: Category & Project Type */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="category_id">Category</Label>
+                  <select
+                    id="category_id"
+                    name="category_id"
+                    disabled={isLoading}
+                    value={formData.category_id}
+                    onChange={handleChange}
+                    className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring text-foreground"
+                  >
+                    {lovs.categories.map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {c.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="project_type_id">Project Type</Label>
+                  <select
+                    id="project_type_id"
+                    name="project_type_id"
+                    disabled={isLoading}
+                    value={formData.project_type_id}
+                    onChange={handleChange}
+                    className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring text-foreground"
+                  >
+                    {lovs.project_types.map((pt) => (
+                      <option key={pt.id} value={pt.id}>
+                        {pt.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
               </div>
 
-              {/* Category */}
+              {/* Grid 2: Priority & Status */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="priority_id">Priority</Label>
+                  <select
+                    id="priority_id"
+                    name="priority_id"
+                    disabled={isLoading}
+                    value={formData.priority_id}
+                    onChange={handleChange}
+                    className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring text-foreground"
+                  >
+                    {lovs.priorities.map((pr) => (
+                      <option key={pr.id} value={pr.id}>
+                        {pr.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="status_id">Status</Label>
+                  <select
+                    id="status_id"
+                    name="status_id"
+                    disabled={isLoading}
+                    value={formData.status_id}
+                    onChange={handleChange}
+                    className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring text-foreground"
+                  >
+                    {lovs.statuses.map((st) => (
+                      <option key={st.id} value={st.id}>
+                        {st.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              {/* Grid 3: Planned Start & End Dates */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="planned_start_date">Planned Start Date</Label>
+                  <Input
+                    id="planned_start_date"
+                    name="planned_start_date"
+                    type="date"
+                    disabled={isLoading}
+                    value={formData.planned_start_date}
+                    onChange={handleChange}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="planned_end_date">Planned End Date</Label>
+                  <Input
+                    id="planned_end_date"
+                    name="planned_end_date"
+                    type="date"
+                    disabled={isLoading}
+                    value={formData.planned_end_date}
+                    onChange={handleChange}
+                  />
+                </div>
+              </div>
+
+              {/* Estimated Duration */}
               <div className="space-y-2">
-                <Label htmlFor="category">Category</Label>
-                <select
-                  id="category"
-                  name="category"
-                  value={formData.category}
+                <Label htmlFor="estimated_duration">Estimated Duration (Days)</Label>
+                <Input
+                  id="estimated_duration"
+                  name="estimated_duration"
+                  type="number"
+                  placeholder="e.g. 30"
+                  min={1}
+                  disabled={isLoading}
+                  value={formData.estimated_duration}
                   onChange={handleChange}
-                  className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring text-foreground"
-                >
-                  <option value="Software Development">Software Development</option>
-                  <option value="Design System">Design System</option>
-                  <option value="Marketing & Growth">Marketing & Growth</option>
-                  <option value="Business Operations">Business Operations</option>
-                </select>
+                />
               </div>
 
               {/* Description */}
               <div className="space-y-2">
-                <Label htmlFor="description">Description</Label>
+                <Label htmlFor="project_description">Description</Label>
                 <textarea
-                  id="description"
-                  name="description"
+                  id="project_description"
+                  name="project_description"
                   rows={3}
                   placeholder="Brief summary of project goals and scope..."
-                  value={formData.description}
+                  disabled={isLoading}
+                  value={formData.project_description}
                   onChange={handleChange}
-                  className="flex w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring text-foreground resize-none"
+                  className="flex w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-xs focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring text-foreground resize-none"
                 />
               </div>
 
               {/* Buttons */}
               <div className="flex gap-3 pt-2">
                 <Link to="/dashboard" className="w-1/2">
-                  <Button type="button" variant="outline" className="w-full">
+                  <Button type="button" variant="outline" disabled={isLoading} className="w-full">
                     Cancel
                   </Button>
                 </Link>
-                <Button type="submit" className="w-1/2 font-semibold shadow-md">
-                  Create Project
+                <Button type="submit" disabled={isLoading} className="w-1/2 font-semibold shadow-md">
+                  {isLoading ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                      Creating...
+                    </>
+                  ) : (
+                    "Create Project"
+                  )}
                 </Button>
               </div>
             </form>

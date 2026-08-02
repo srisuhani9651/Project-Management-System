@@ -2,6 +2,7 @@ import React, { useState } from "react"
 import { Link, useNavigate } from "react-router-dom"
 import { Kanban, Lock, Mail, AlertCircle, Loader2 } from "lucide-react"
 import { useProject } from "@/context/ProjectContext"
+import api from "@/services/api"
 import { Button } from "@/components/ui/button"
 import {
   Card,
@@ -46,7 +47,7 @@ export function Login() {
     return newErrors
   }
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault()
     const validationErrors = validate()
     if (Object.keys(validationErrors).length > 0) {
@@ -57,18 +58,34 @@ export function Login() {
     setErrors({})
     setIsLoading(true)
 
-    // Log in user with formatted name
-    const emailName = formData.email.split("@")[0]
-    const formattedName = emailName.charAt(0).toUpperCase() + emailName.slice(1)
+    try {
+      const response = await api.post("/login", {
+        email: formData.email.trim(),
+        password: formData.password,
+      })
 
-    loginUser({
-      fullName: formattedName,
-      email: formData.email.trim(),
-    })
+      const data = response.data
 
-    setTimeout(() => {
+      loginUser({
+        id: data.user.user_id,
+        fullName: data.user.full_name,
+        email: data.user.email,
+        access_token: data.access_token,
+      })
+
       navigate("/dashboard")
-    }, 600)
+    } catch (err) {
+      const errorMsg =
+        err.response?.data?.detail
+          ? typeof err.response.data.detail === "string"
+            ? err.response.data.detail
+            : Array.isArray(err.response.data.detail)
+            ? err.response.data.detail[0]?.msg || "Invalid credentials"
+            : "Login failed. Please check your credentials."
+          : "Unable to connect to server. Please check if backend is running."
+      setErrors({ server: errorMsg })
+      setIsLoading(false)
+    }
   }
 
   return (
@@ -92,7 +109,13 @@ export function Login() {
           </CardHeader>
 
           <CardContent className="pt-6">
-            <form onSubmit={handleSubmit} className="space-y-4">
+            {errors.server && (
+              <div className="mb-4 p-3 rounded-lg bg-destructive/10 border border-destructive/30 text-destructive text-sm flex items-center gap-2">
+                <AlertCircle className="h-4 w-4 shrink-0" />
+                <span>{errors.server}</span>
+              </div>
+            )}
+            <form onSubmit={handleSubmit} className="space-y-4" autoComplete="on">
               
               {/* Email */}
               <div className="space-y-2">
@@ -104,6 +127,7 @@ export function Login() {
                     name="email"
                     type="email"
                     placeholder="name@example.com"
+                    autoComplete="username"
                     disabled={isLoading}
                     value={formData.email}
                     onChange={handleChange}
@@ -132,6 +156,7 @@ export function Login() {
                     name="password"
                     type="password"
                     placeholder="••••••••"
+                    autoComplete="current-password"
                     disabled={isLoading}
                     value={formData.password}
                     onChange={handleChange}

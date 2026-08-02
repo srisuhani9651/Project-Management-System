@@ -9,10 +9,8 @@ import {
   X,
   ChevronLeft,
   ChevronRight,
-  Plus
 } from "lucide-react"
 import { useProject } from "@/context/ProjectContext"
-import { Button } from "@/components/ui/button"
 
 export function Sidebar({ isOpen, onClose, collapsed, onToggleCollapse }) {
   const navigate = useNavigate()
@@ -25,8 +23,8 @@ export function Sidebar({ isOpen, onClose, collapsed, onToggleCollapse }) {
     { label: "Settings", icon: Settings, path: "/settings" },
   ]
 
-  const handleLogout = () => {
-    logoutUser()
+  const handleLogout = async () => {
+    await logoutUser()
     navigate("/")
   }
 
@@ -67,20 +65,6 @@ export function Sidebar({ isOpen, onClose, collapsed, onToggleCollapse }) {
             >
               <X className="h-5 w-5" />
             </button>
-          </div>
-
-          {/* New Project CTA Button inside Sidebar */}
-          <div className="p-3">
-            <Button
-              onClick={() => navigate("/projects/create")}
-              size="sm"
-              className={`w-full justify-center font-semibold shadow-xs gap-2 ${
-                collapsed ? "px-0" : "px-3"
-              }`}
-            >
-              <Plus className="h-4 w-4 stroke-[2.5]" />
-              {!collapsed && <span>Create Project</span>}
-            </Button>
           </div>
 
           {/* Navigation Links */}

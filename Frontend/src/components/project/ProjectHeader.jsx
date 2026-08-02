@@ -52,8 +52,8 @@ export function ProjectHeader({ project, onDeleteProject, onEditProject }) {
         </div>
 
         {/* Right Side: PBAC Permission Action Buttons */}
-        <div className="flex items-center gap-3">
-          {/* Edit Project Button (Action: "update", Resource: "project") */}
+        <div className="flex items-center gap-2">
+          {/* Edit Button */}
           <PermissionButton
             action="update"
             resource="project"
@@ -61,12 +61,12 @@ export function ProjectHeader({ project, onDeleteProject, onEditProject }) {
             variant="outline"
             size="sm"
             onClick={onEditProject}
-            className="gap-2 font-medium"
+            className="gap-1.5 font-medium text-xs h-8"
           >
-            <Edit3 className="h-4 w-4" /> Edit Project
+            <Edit3 className="h-3.5 w-3.5" /> Edit
           </PermissionButton>
 
-          {/* Delete Project Button (Action: "delete", Resource: "project") */}
+          {/* Delete Button */}
           <PermissionButton
             action="delete"
             resource="project"
@@ -74,9 +74,9 @@ export function ProjectHeader({ project, onDeleteProject, onEditProject }) {
             variant="destructive"
             size="sm"
             onClick={() => setShowDeleteDialog(true)}
-            className="gap-2 font-semibold shadow-xs"
+            className="gap-1.5 font-semibold text-xs h-8 shadow-xs"
           >
-            <Trash2 className="h-4 w-4" /> Delete Project
+            <Trash2 className="h-3.5 w-3.5" /> Delete
           </PermissionButton>
         </div>
 

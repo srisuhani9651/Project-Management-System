@@ -1,7 +1,8 @@
-import React, { useState } from "react"
+import React, { useState, useEffect } from "react"
 import { Link, useNavigate } from "react-router-dom"
 import { Kanban, Lock, Mail, User, AlertCircle, Check, X, Eye, EyeOff, Loader2 } from "lucide-react"
 import { useProject } from "@/context/ProjectContext"
+import api from "@/services/api"
 import { Button } from "@/components/ui/button"
 import {
   Card,
@@ -23,6 +24,17 @@ export function Signup() {
     password: "",
     confirmPassword: "",
   })
+
+  // Ensure form is completely blank whenever Signup page is opened
+  useEffect(() => {
+    setFormData({
+      fullName: "",
+      email: "",
+      password: "",
+      confirmPassword: "",
+    })
+    setErrors({})
+  }, [])
 
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
@@ -91,7 +103,7 @@ export function Signup() {
     return newErrors
   }
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault()
     const validationErrors = validate()
     if (Object.keys(validationErrors).length > 0) {
@@ -102,15 +114,35 @@ export function Signup() {
     setErrors({})
     setIsLoading(true)
 
-    // Log in user and navigate directly to dashboard
-    loginUser({
-      fullName: formData.fullName.trim(),
-      email: formData.email.trim(),
-    })
+    try {
+      const response = await api.post("/register", {
+        full_name: formData.fullName.trim(),
+        email: formData.email.trim(),
+        password: formData.password,
+      })
 
-    setTimeout(() => {
+      const data = response.data
+
+      loginUser({
+        id: data.user.user_id,
+        fullName: data.user.full_name,
+        email: data.user.email,
+        access_token: data.access_token,
+      })
+
       navigate("/dashboard")
-    }, 600)
+    } catch (err) {
+      const errorMsg =
+        err.response?.data?.detail
+          ? typeof err.response.data.detail === "string"
+            ? err.response.data.detail
+            : Array.isArray(err.response.data.detail)
+            ? err.response.data.detail[0]?.msg || "Registration failed"
+            : "Registration failed. Please try again."
+          : "Unable to connect to server. Please check if backend is running."
+      setErrors({ server: errorMsg })
+      setIsLoading(false)
+    }
   }
 
   return (
@@ -134,7 +166,13 @@ export function Signup() {
           </CardHeader>
 
           <CardContent className="pt-6">
-            <form onSubmit={handleSubmit} className="space-y-4">
+            {errors.server && (
+              <div className="mb-4 p-3 rounded-lg bg-destructive/10 border border-destructive/30 text-destructive text-sm flex items-center gap-2">
+                <AlertCircle className="h-4 w-4 shrink-0" />
+                <span>{errors.server}</span>
+              </div>
+            )}
+            <form onSubmit={handleSubmit} className="space-y-4" autoComplete="off">
               
               {/* Full Name */}
               <div className="space-y-2">
@@ -146,6 +184,7 @@ export function Signup() {
                     name="fullName"
                     type="text"
                     placeholder="John Doe"
+                    autoComplete="off"
                     disabled={isLoading}
                     value={formData.fullName}
                     onChange={handleChange}
@@ -169,6 +208,7 @@ export function Signup() {
                     name="email"
                     type="email"
                     placeholder="name@example.com"
+                    autoComplete="new-password"
                     disabled={isLoading}
                     value={formData.email}
                     onChange={handleChange}
@@ -192,6 +232,7 @@ export function Signup() {
                     name="password"
                     type={showPassword ? "text" : "password"}
                     placeholder="••••••••"
+                    autoComplete="new-password"
                     disabled={isLoading}
                     value={formData.password}
                     onChange={handleChange}
@@ -246,6 +287,7 @@ export function Signup() {
                     name="confirmPassword"
                     type={showConfirmPassword ? "text" : "password"}
                     placeholder="••••••••"
+                    autoComplete="new-password"
                     disabled={isLoading}
                     value={formData.confirmPassword}
                     onChange={handleChange}
