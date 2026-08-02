@@ -1,15 +1,16 @@
 import React, { useState } from "react"
 import { Link, useNavigate } from "react-router-dom"
-import { ArrowRight, CheckCircle2, Clock, Tag, Plus, CheckCircle, Folder } from "lucide-react"
+import { ArrowRight, CheckCircle2, Clock, Tag, Plus } from "lucide-react"
 import { Card } from "@/components/ui/card"
 import { CreateTaskModal } from "@/components/project/CreateTaskModal"
 
 /**
  * Ultra-Modern ProjectCard Component
  * Features:
+ * - Click anywhere on the card to route to project details page
  * - Top gradient accent bar
  * - Key avatar badge & status pills
- * - Interactive "+ Add Task" button directly inside the card
+ * - Interactive "+ Add Task" button directly inside the card with stopPropagation
  * - Completed & Pending task telemetry
  */
 export function ProjectCard({ project, onTaskCreated }) {
@@ -42,6 +43,13 @@ export function ProjectCard({ project, onTaskCreated }) {
 
   const statusInfo = getStatusBadge(project.status)
 
+  const handleCardClick = () => {
+    const targetId = project.id || project.key
+    if (targetId) {
+      navigate(`/projects/${targetId}`)
+    }
+  }
+
   const handleTaskCreatedInModal = (newTask) => {
     if (onTaskCreated) {
       onTaskCreated(newTask)
@@ -50,7 +58,10 @@ export function ProjectCard({ project, onTaskCreated }) {
 
   return (
     <>
-      <Card className="relative overflow-hidden border border-border/70 bg-card hover:shadow-xl hover:border-blue-500/40 transition-all duration-300 rounded-2xl p-5 flex flex-col justify-between group font-roboto">
+      <Card
+        onClick={handleCardClick}
+        className="relative overflow-hidden border border-border/70 bg-card hover:shadow-xl hover:border-blue-500/40 transition-all duration-300 rounded-2xl p-5 flex flex-col justify-between group font-roboto cursor-pointer"
+      >
         
         {/* Top Accent Line */}
         <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-blue-600 via-indigo-500 to-sky-400" />
@@ -136,12 +147,15 @@ export function ProjectCard({ project, onTaskCreated }) {
             </button>
 
             {/* View Project Link */}
-            <Link
-              to={`/projects/${project.id || project.key}`}
-              className="inline-flex items-center gap-1 font-poppins font-semibold text-xs text-muted-foreground hover:text-blue-600 transition-colors group-hover:translate-x-0.5"
+            <div
+              onClick={(e) => {
+                e.stopPropagation()
+                handleCardClick()
+              }}
+              className="inline-flex items-center gap-1 font-poppins font-semibold text-xs text-muted-foreground hover:text-blue-600 transition-colors group-hover:translate-x-0.5 cursor-pointer"
             >
               <ArrowRight className="h-3.5 w-3.5" />
-            </Link>
+            </div>
           </div>
 
         </div>

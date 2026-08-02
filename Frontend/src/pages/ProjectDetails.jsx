@@ -11,11 +11,8 @@ import { CreateTaskModal } from "@/components/project/CreateTaskModal"
 import { EditProjectModal } from "@/components/project/EditProjectModal"
 
 /**
- * ProjectDetails Page Component
- * Recreates the exact project details page from the reference screenshot:
- * 1. Top breadcrumb & project header.
- * 2. Tab Navigation: Overview, Board View, Tasks (with badge counter).
- * 3. Overview Tab with 4 metric cards, Donut Status Distribution, Workflow & Priority Distribution bars, Recent Activity timeline, and Execution Health card.
+ * Modern ProjectDetails Page Component
+ * Segmented pill tabs UI & streamlined header.
  */
 export function ProjectDetails() {
   const { projectId, id } = useParams()
@@ -24,7 +21,6 @@ export function ProjectDetails() {
 
   const currentId = projectId || id
 
-  // Find target project or fallback to first project
   const project =
     projects.find((p) => p.id === currentId || p.key === currentId) ||
     projects[0] || {
@@ -52,7 +48,6 @@ export function ProjectDetails() {
     projectKey: project.key,
   })
 
-  // Initialized with 2 realistic tasks matching screenshot
   const [tasks, setTasks] = useState([
     {
       id: "t-101",
@@ -76,7 +71,6 @@ export function ProjectDetails() {
     },
   ])
 
-  // Fetch tasks from Backend API when project ID changes
   useEffect(() => {
     async function fetchProjectTasks() {
       if (!project?.id || project.id.startsWith("proj-")) return
@@ -96,7 +90,6 @@ export function ProjectDetails() {
   const [showCreateTaskModal, setShowCreateTaskModal] = useState(false)
   const [showEditProjectModal, setShowEditProjectModal] = useState(false)
 
-  // Handle Project Deletion
   const handleDeleteProject = () => {
     if (setProjects) {
       setProjects((prev) => prev.filter((p) => p.id !== project.id))
@@ -104,31 +97,27 @@ export function ProjectDetails() {
     navigate("/dashboard")
   }
 
-  // Handle Project Edit Modal Toggle
   const handleEditProject = () => {
     setShowEditProjectModal(true)
   }
 
-  // Handle Task Creation
   const handleCreateTask = (newTask) => {
     const formatted = formatTaskObj(newTask)
     setTasks((prev) => [formatted, ...prev])
   }
 
-  // Handle Task Status Update
   const handleUpdateTaskStatus = (taskId, newStatus) => {
     setTasks((prev) =>
       prev.map((t) => (t.id === taskId ? { ...t, status: newStatus } : t))
     )
   }
 
-  // Handle Task Deletion
   const handleDeleteTask = (taskId) => {
     setTasks((prev) => prev.filter((t) => t.id !== taskId))
   }
 
   return (
-    <div className="flex-1 py-6 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto w-full space-y-6">
+    <div className="flex-1 pb-16 pt-6 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto w-full space-y-6 font-roboto">
       
       {/* Page Header */}
       <ProjectHeader
@@ -139,29 +128,29 @@ export function ProjectDetails() {
         tasksCount={tasks.length}
       />
 
-      {/* Navigation Tabs */}
-      <Tabs defaultValue="overview" className="space-y-6">
-        <TabsList className="bg-transparent p-0 h-auto border-b border-border/60 w-full justify-start rounded-none space-x-6">
+      {/* Segmented Pill Tabs Navigation */}
+      <Tabs defaultValue="overview" className="space-y-6 font-roboto">
+        <TabsList className="bg-muted/40 p-1.5 rounded-2xl flex border border-border/60 w-full sm:w-auto max-w-md justify-between gap-1 shadow-xs">
           <TabsTrigger
             value="overview"
-            className="rounded-none border-b-2 border-transparent px-1 pb-3 pt-2 text-xs font-bold text-muted-foreground data-[state=active]:border-blue-600 data-[state=active]:text-blue-600 data-[state=active]:bg-transparent shadow-none"
+            className="flex-1 rounded-xl px-4 py-2 font-poppins text-xs font-semibold text-muted-foreground data-[state=active]:bg-card data-[state=active]:text-blue-600 data-[state=active]:shadow-xs transition-all cursor-pointer"
           >
             Overview
           </TabsTrigger>
 
           <TabsTrigger
             value="board"
-            className="rounded-none border-b-2 border-transparent px-1 pb-3 pt-2 text-xs font-bold text-muted-foreground data-[state=active]:border-blue-600 data-[state=active]:text-blue-600 data-[state=active]:bg-transparent shadow-none"
+            className="flex-1 rounded-xl px-4 py-2 font-poppins text-xs font-semibold text-muted-foreground data-[state=active]:bg-card data-[state=active]:text-blue-600 data-[state=active]:shadow-xs transition-all cursor-pointer"
           >
             Board View
           </TabsTrigger>
 
           <TabsTrigger
             value="tasks"
-            className="rounded-none border-b-2 border-transparent px-1 pb-3 pt-2 text-xs font-bold text-muted-foreground data-[state=active]:border-blue-600 data-[state=active]:text-blue-600 data-[state=active]:bg-transparent shadow-none flex items-center gap-1.5"
+            className="flex-1 rounded-xl px-4 py-2 font-poppins text-xs font-semibold text-muted-foreground data-[state=active]:bg-card data-[state=active]:text-blue-600 data-[state=active]:shadow-xs transition-all flex items-center justify-center gap-1.5 cursor-pointer"
           >
             <span>Tasks</span>
-            <span className="h-4 px-1.5 rounded-full bg-muted text-[10px] font-black text-muted-foreground">
+            <span className="h-4 px-1.5 rounded-full bg-blue-500/10 text-[10px] font-poppins font-bold text-blue-600">
               {tasks.length}
             </span>
           </TabsTrigger>
