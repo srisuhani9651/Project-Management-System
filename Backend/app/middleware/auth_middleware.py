@@ -1,3 +1,4 @@
+from uuid import UUID
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 import jwt
@@ -34,8 +35,14 @@ def get_current_user(
     except jwt.PyJWTError:
         raise credentials_exception
 
-    user = db.query(UserMaster).filter(UserMaster.user_id == int(user_id)).first()
+    try:
+        user_uuid = UUID(user_id)
+    except (ValueError, TypeError):
+        raise credentials_exception
+
+    user = db.query(UserMaster).filter(UserMaster.user_id == user_uuid).first()
     if user is None:
         raise credentials_exception
 
     return user
+

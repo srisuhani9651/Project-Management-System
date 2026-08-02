@@ -55,3 +55,33 @@ class RegisterResponse(BaseModel):
     access_token: str
     token_type: str = "bearer"
     user: UserResponse
+
+
+class UserLogin(BaseModel):
+    """
+    WHAT IT DOES: Pydantic request schema for user login.
+    EXPECTED RESULT: Validates incoming request payload for /login route.
+    """
+    email: EmailStr = Field(..., description="User's email address")
+    password: str = Field(..., description="User's plain text password")
+
+
+class LoginResponse(BaseModel):
+    """
+    WHAT IT DOES: Response schema returned after successful authentication.
+    EXPECTED RESULT: Contains success message, JWT access token, and user details.
+    """
+    message: str = "Login successful"
+    access_token: str
+    token_type: str = "bearer"
+    user: UserResponse
+
+
+class LogoutResponse(BaseModel):
+    """
+    WHAT IT DOES: Response schema returned after successful logout.
+    EXPECTED RESULT: Contains success message.
+    """
+    message: str = "Successfully logged out"
+
+

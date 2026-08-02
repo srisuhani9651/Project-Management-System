@@ -1,22 +1,46 @@
+import json
+from contextlib import asynccontextmanager
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from app.db.database import init_db
 from app.routers import auth
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """
+    Application Lifespan Event Handler.
+    1. Initializes database schemas and tables on launch.
+    2. Automatically generates and exports openapi.json Swagger specification file.
+    """
+    init_db()
+    try:
+        openapi_schema = app.openapi()
+        with open("openapi.json", "w", encoding="utf-8") as f:
+            json.dump(openapi_schema, f, indent=2)
+    except Exception as e:
+        print(f"Error exporting openapi.json: {e}")
+    yield
+
 
 # ==============================================================================
 # FASTAPI APPLICATION SETUP
 # ==============================================================================
-# Initialize FastAPI application
-# Result: Creates core backend app instance with interactive API docs (/docs)
 app = FastAPI(
     title="Project Management API",
     description="Backend API services for Project Management System",
-    version="1.0.0"
+    version="1.0.0",
+    lifespan=lifespan
 )
 
-# WHAT IT DOES:
-# Initializes the database, verifies connections, auto-creates schemas/tables, and seeds LOV data.
-# EXPECTED RESULT: Database schemas, tables, and LOV records ready on server launch.
-init_db()
+# Enable CORS for frontend integration
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 # Include Routers
 app.include_router(auth.router)
