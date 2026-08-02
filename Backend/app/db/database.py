@@ -71,13 +71,18 @@ Base = declarative_base()
 def init_db():
     """
     WHAT IT DOES:
-    Creates missing tables for imported SQLAlchemy models in the database.
+    Creates missing tables for imported SQLAlchemy models and populates default LOV lookup data.
 
     EXPECTED RESULT:
-    Ensures model tables are initialized on startup.
+    Ensures model tables are initialized and seeded with default records on startup.
     """
     import app.models  # noqa: F401
     Base.metadata.create_all(bind=engine)
+
+    # Automatically seed default LOV lookup records
+    from app.seeders.lov_seeder import run_seeders
+    run_seeders()
+
 
 
 def get_db():
