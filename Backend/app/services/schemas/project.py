@@ -53,6 +53,10 @@ class ProjectResponse(BaseModel):
     actual_start_date: Optional[datetime] = None
     actual_end_date: Optional[datetime] = None
     estimated_duration: Optional[int] = None
+    total_tasks: int = 0
+    completed_tasks: int = 0
+    pending_tasks: int = 0
+    progress: int = 0
     created_by: Optional[UUID] = None
     is_active: bool
     created_at: Optional[datetime] = None

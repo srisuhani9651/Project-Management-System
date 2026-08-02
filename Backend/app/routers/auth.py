@@ -10,10 +10,13 @@ from app.services.schemas.user import (
     RegisterResponse,
     UserLogin,
     UserRegister,
+    UserResponse,
+    UserUpdateSettings,
+    UpdateSettingsResponse,
 )
 from app.services.auth_service import AuthService
 
-router = APIRouter(tags=["Authentication"])
+router = APIRouter(prefix="/auth", tags=["Authentication"])
 
 
 @router.post(
@@ -27,10 +30,6 @@ def register_user(
     user_data: UserRegister,
     db: Session = Depends(get_db)
 ):
-    """
-    Route handler for user registration.
-    Delegates all business logic & controller operations to AuthService.
-    """
     return AuthService.register_new_user(user_data=user_data, db=db)
 
 
@@ -45,10 +44,6 @@ def login_user(
     login_data: UserLogin,
     db: Session = Depends(get_db)
 ):
-    """
-    Route handler for user login.
-    Delegates authentication logic to AuthService.
-    """
     return AuthService.login_user(login_data=login_data, db=db)
 
 
@@ -62,8 +57,32 @@ def login_user(
 def logout_user(
     current_user: UserMaster = Depends(get_current_user)
 ):
-    """
-    Route handler for user logout.
-    Requires Bearer token in Authorization header.
-    """
     return AuthService.logout_user()
+
+
+@router.get(
+    "/me",
+    response_model=UserResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Get current user profile (Authenticated)",
+    description="Returns profile information for the authenticated user."
+)
+def get_me(
+    current_user: UserMaster = Depends(get_current_user)
+):
+    return UserResponse.model_validate(current_user)
+
+
+@router.put(
+    "/settings",
+    response_model=UpdateSettingsResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Update User Settings & Password (Authenticated)",
+    description="Updates user profile, preferred username ('What should we call you?'), and resets password."
+)
+def update_user_settings(
+    settings_data: UserUpdateSettings,
+    current_user: UserMaster = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    return AuthService.update_user_settings(current_user=current_user, settings_data=settings_data, db=db)

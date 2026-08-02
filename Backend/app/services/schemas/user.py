@@ -85,3 +85,33 @@ class LogoutResponse(BaseModel):
     message: str = "Successfully logged out"
 
 
+class UserUpdateSettings(BaseModel):
+    """
+    Pydantic request schema for updating user profile settings and resetting password.
+    """
+    full_name: Optional[str] = Field(None, description="User's full name")
+    username: Optional[str] = Field(None, description="What should we call you? (Preferred display username)")
+    current_password: Optional[str] = Field(None, description="Current password required when resetting password")
+    new_password: Optional[str] = Field(None, description="New password to set")
+
+    @field_validator("new_password")
+    @classmethod
+    def validate_new_password(cls, v: Optional[str]) -> Optional[str]:
+        if v is None or v == "":
+            return None
+        if len(v) < 8:
+            raise ValueError("New password must be at least 8 characters long")
+        if not re.search(r"[A-Z]", v):
+            raise ValueError("New password must contain at least one uppercase letter (A-Z)")
+        if not re.search(r"[a-z]", v):
+            raise ValueError("New password must contain at least one lowercase letter (a-z)")
+        if not re.search(r"[0-9]", v):
+            raise ValueError("New password must contain at least one digit (0-9)")
+        if not re.search(r"[!@#$%^&*]", v):
+            raise ValueError("New password must contain at least one special character (!@#$%^&*)")
+        return v
+
+
+class UpdateSettingsResponse(BaseModel):
+    message: str = "Settings updated successfully"
+    user: UserResponse

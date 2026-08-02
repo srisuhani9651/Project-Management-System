@@ -6,14 +6,14 @@
     "version": "1.0.0"
   },
   "paths": {
-    "/register": {
+    "/auth/register": {
       "post": {
         "tags": [
           "Authentication"
         ],
         "summary": "Register a new user (Unauthenticated)",
         "description": "Registers a new user, hashes the password, saves to the database, and returns a JWT access token.",
-        "operationId": "register_user_register_post",
+        "operationId": "register_user_auth_register_post",
         "requestBody": {
           "content": {
             "application/json": {
@@ -48,14 +48,14 @@
         }
       }
     },
-    "/login": {
+    "/auth/login": {
       "post": {
         "tags": [
           "Authentication"
         ],
         "summary": "Login user (Unauthenticated)",
         "description": "Authenticates user with email and password, returning a JWT access token.",
-        "operationId": "login_user_login_post",
+        "operationId": "login_user_auth_login_post",
         "requestBody": {
           "content": {
             "application/json": {
@@ -90,14 +90,14 @@
         }
       }
     },
-    "/logout": {
+    "/auth/logout": {
       "post": {
         "tags": [
           "Authentication"
         ],
         "summary": "Logout user (Authenticated)",
         "description": "Logs out the currently authenticated user.",
-        "operationId": "logout_user_logout_post",
+        "operationId": "logout_user_auth_logout_post",
         "responses": {
           "200": {
             "description": "Successful Response",
@@ -105,6 +105,80 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/LogoutResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/auth/me": {
+      "get": {
+        "tags": [
+          "Authentication"
+        ],
+        "summary": "Get current user profile (Authenticated)",
+        "description": "Returns profile information for the authenticated user.",
+        "operationId": "get_me_auth_me_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/auth/settings": {
+      "put": {
+        "tags": [
+          "Authentication"
+        ],
+        "summary": "Update User Settings & Password (Authenticated)",
+        "description": "Updates user profile, preferred username ('What should we call you?'), and resets password.",
+        "operationId": "update_user_settings_auth_settings_put",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UserUpdateSettings"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UpdateSettingsResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
                 }
               }
             }
@@ -667,6 +741,54 @@
         }
       }
     },
+    "/api/dashboard": {
+      "get": {
+        "tags": [
+          "Dashboard Analytics"
+        ],
+        "summary": "Get Single Unified Dashboard Telemetry API",
+        "description": "Returns all dynamic metrics (Pending Tasks, Task Distribution by Project, Time Analytics, and Productivity Insights) calculated directly from PostgreSQL project & task data.",
+        "operationId": "get_dashboard_telemetry_api_dashboard_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "type": "object",
+                  "title": "Response Get Dashboard Telemetry Api Dashboard Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/dashboard": {
+      "get": {
+        "tags": [
+          "Dashboard Analytics"
+        ],
+        "summary": "Get Single Unified Dashboard Telemetry API (Alias)",
+        "description": "Alias route for GET /api/dashboard.",
+        "operationId": "get_dashboard_telemetry_alias_dashboard_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "type": "object",
+                  "title": "Response Get Dashboard Telemetry Alias Dashboard Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/": {
       "get": {
         "summary": "Home",
@@ -1118,6 +1240,26 @@
               }
             ],
             "title": "Estimated Duration"
+          },
+          "total_tasks": {
+            "type": "integer",
+            "title": "Total Tasks",
+            "default": 0
+          },
+          "completed_tasks": {
+            "type": "integer",
+            "title": "Completed Tasks",
+            "default": 0
+          },
+          "pending_tasks": {
+            "type": "integer",
+            "title": "Pending Tasks",
+            "default": 0
+          },
+          "progress": {
+            "type": "integer",
+            "title": "Progress",
+            "default": 0
           },
           "created_by": {
             "anyOf": [
@@ -1768,6 +1910,23 @@
         ],
         "title": "UpdateProjectResponse"
       },
+      "UpdateSettingsResponse": {
+        "properties": {
+          "message": {
+            "type": "string",
+            "title": "Message",
+            "default": "Settings updated successfully"
+          },
+          "user": {
+            "$ref": "#/components/schemas/UserResponse"
+          }
+        },
+        "type": "object",
+        "required": [
+          "user"
+        ],
+        "title": "UpdateSettingsResponse"
+      },
       "UpdateTaskResponse": {
         "properties": {
           "message": {
@@ -1896,6 +2055,61 @@
         ],
         "title": "UserResponse",
         "description": "WHAT IT DOES: Pydantic response schema for user details.\nEXPECTED RESULT: Formats user details in API responses."
+      },
+      "UserUpdateSettings": {
+        "properties": {
+          "full_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Full Name",
+            "description": "User's full name"
+          },
+          "username": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Username",
+            "description": "What should we call you? (Preferred display username)"
+          },
+          "current_password": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Current Password",
+            "description": "Current password required when resetting password"
+          },
+          "new_password": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "New Password",
+            "description": "New password to set"
+          }
+        },
+        "type": "object",
+        "title": "UserUpdateSettings",
+        "description": "Pydantic request schema for updating user profile settings and resetting password."
       },
       "ValidationError": {
         "properties": {

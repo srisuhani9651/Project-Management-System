@@ -4,6 +4,7 @@ from fastapi import HTTPException, status
 from sqlalchemy.orm import Session
 
 from app.models.tracker.project import Project
+from app.models.tracker.tasks import Task
 from app.models.lov.category import Category
 from app.models.lov.priority import Priority
 from app.models.lov.project_type import ProjectType
@@ -160,7 +161,7 @@ class ProjectService:
 
     @staticmethod
     def _format_project_response(project: Any, db: Session) -> ProjectResponse:
-        """Helper to format Project ORM model with populated LOV names."""
+        """Helper to format Project ORM model with populated LOV names and dynamic task metrics."""
         status_name = None
         priority_name = None
         project_type_name = None
@@ -186,6 +187,22 @@ class ProjectService:
             if cat:
                 category_name = cat.category_name
 
+        # Calculate dynamic task telemetry directly from PostgreSQL DB
+        tasks = db.query(Task).filter(
+            Task.project_id == project.project_id,
+            Task.is_active == True
+        ).all()
+
+        statuses_map = {s.status_id: str(s.status_name).lower() for s in db.query(Status).all()}
+
+        total_tasks = len(tasks)
+        completed_tasks = sum(
+            1 for t in tasks
+            if t.completed_at is not None or (t.status_id and statuses_map.get(t.status_id, "") in ("done", "completed"))
+        )
+        pending_tasks = total_tasks - completed_tasks
+        progress = round((completed_tasks / total_tasks) * 100) if total_tasks > 0 else 0
+
         return ProjectResponse(
             project_id=project.project_id,  
             project_name=project.project_name,  
@@ -202,7 +219,11 @@ class ProjectService:
             planned_end_date=project.planned_end_date, 
             actual_start_date=project.actual_start_date, 
             actual_end_date=project.actual_end_date, 
-            estimated_duration=project.estimated_duration,  
+            estimated_duration=project.estimated_duration,
+            total_tasks=total_tasks,
+            completed_tasks=completed_tasks,
+            pending_tasks=pending_tasks,
+            progress=progress,
             created_by=project.created_by, 
             is_active=project.is_active, 
             created_at=project.created_at,  
