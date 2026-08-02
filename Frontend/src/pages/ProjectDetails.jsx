@@ -9,6 +9,7 @@ import { ProjectOverview } from "@/components/project/ProjectOverview"
 import { BoardView } from "@/components/project/BoardView"
 import { TaskTable } from "@/components/project/TaskTable"
 import { CreateTaskModal } from "@/components/project/CreateTaskModal"
+import { EditProjectModal } from "@/components/project/EditProjectModal"
 
 export function ProjectDetails() {
   const { projectId, id } = useParams()
@@ -87,6 +88,7 @@ export function ProjectDetails() {
   }, [project?.id])
 
   const [showCreateTaskModal, setShowCreateTaskModal] = useState(false)
+  const [showEditProjectModal, setShowEditProjectModal] = useState(false)
 
   // Handle Project Deletion
   const handleDeleteProject = () => {
@@ -96,9 +98,9 @@ export function ProjectDetails() {
     navigate("/dashboard")
   }
 
-  // Handle Project Edit
+  // Handle Project Edit Modal Toggle
   const handleEditProject = () => {
-    navigate("/create-project")
+    setShowEditProjectModal(true)
   }
 
   // Handle Task Creation
@@ -175,6 +177,13 @@ export function ProjectDetails() {
         onCreateTask={handleCreateTask}
         projectId={project.id}
         projectKey={project.key}
+      />
+
+      {/* Edit Project Modal */}
+      <EditProjectModal
+        open={showEditProjectModal}
+        onOpenChange={setShowEditProjectModal}
+        project={project}
       />
     </div>
   )
