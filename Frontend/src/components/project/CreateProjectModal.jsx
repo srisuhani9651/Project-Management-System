@@ -2,7 +2,6 @@ import React, { useState } from "react"
 import { X, FolderPlus } from "lucide-react"
 import api from "@/services/api"
 import { useProject } from "@/context/ProjectContext"
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card"
 import { ProjectForm } from "./ProjectForm"
 
 export function CreateProjectModal({ open, onOpenChange, onProjectCreated }) {
@@ -17,7 +16,6 @@ export function CreateProjectModal({ open, onOpenChange, onProjectCreated }) {
     setServerError("")
 
     try {
-      // POST http://localhost:8000/projects
       const res = await api.post("/projects", payload)
       const createdData = res.data?.project || res.data || {}
 
@@ -66,41 +64,43 @@ export function CreateProjectModal({ open, onOpenChange, onProjectCreated }) {
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 animate-in fade-in duration-150 overflow-y-auto">
-      <Card className="w-full max-w-2xl border border-border/80 bg-card shadow-2xl rounded-2xl relative my-8 animate-in zoom-in-95 duration-150">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/50 backdrop-blur-md p-4 animate-fade-in overflow-y-auto font-roboto">
+      <div className="w-full max-w-2xl border border-border/80 bg-card shadow-2xl rounded-3xl relative my-8 p-6 sm:p-8 space-y-6">
+        
+        {/* Close Button */}
         <button
           onClick={() => onOpenChange(false)}
-          className="absolute right-4 top-4 text-muted-foreground hover:text-foreground cursor-pointer"
+          className="absolute right-5 top-5 p-2 rounded-xl text-muted-foreground hover:bg-muted hover:text-foreground transition-colors cursor-pointer"
           disabled={isLoading}
         >
           <X className="h-5 w-5" />
         </button>
 
-        <CardHeader className="pb-3 border-b border-border/40 text-center">
-          <div className="mx-auto h-10 w-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center mb-1">
-            <FolderPlus className="h-5 w-5" />
+        {/* Modal Header */}
+        <div className="flex flex-col items-center justify-center text-center space-y-2 pb-2 border-b border-border/60">
+          <div className="h-12 w-12 rounded-2xl bg-gradient-to-tr from-blue-600 to-indigo-600 text-white flex items-center justify-center shadow-lg shadow-blue-500/20">
+            <FolderPlus className="h-6 w-6 stroke-[2]" />
           </div>
-          <CardTitle className="text-lg font-bold">Create New Project</CardTitle>
-          <CardDescription className="text-xs">
-            Fill in required details to create a new project in the system.
-          </CardDescription>
-        </CardHeader>
+          <h2 className="font-poppins text-xl font-bold text-foreground">Create New Project</h2>
+          <p className="text-xs text-muted-foreground max-w-md">
+            Configure project parameters, classifications, and target timeline schedule.
+          </p>
+        </div>
 
-        <CardContent className="pt-4">
-          {serverError && (
-            <div className="mb-4 p-3 rounded-lg bg-destructive/10 border border-destructive/30 text-destructive text-xs flex items-center gap-2">
-              <X className="h-4 w-4 shrink-0" />
-              <span>{serverError}</span>
-            </div>
-          )}
+        {serverError && (
+          <div className="p-3.5 rounded-2xl bg-rose-500/10 border border-rose-500/20 text-rose-600 text-xs font-medium flex items-center gap-2">
+            <X className="h-4 w-4 shrink-0" />
+            <span>{serverError}</span>
+          </div>
+        )}
 
-          <ProjectForm
-            onSubmit={handleSubmit}
-            isLoading={isLoading}
-            submitLabel="Create Project"
-          />
-        </CardContent>
-      </Card>
+        <ProjectForm
+          onSubmit={handleSubmit}
+          isLoading={isLoading}
+          submitLabel="Create Project"
+        />
+
+      </div>
     </div>
   )
 }

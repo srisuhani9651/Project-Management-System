@@ -1,14 +1,14 @@
 import React, { useState, useEffect } from "react"
-import { AlertCircle, Calendar, Info, Layers, Loader2 } from "lucide-react"
+import { AlertCircle, Calendar, Info, Layers, Loader2, ChevronDown } from "lucide-react"
 import api from "@/services/api"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 
 /**
- * ProjectForm Component
- * Fully synced with backend PostgreSQL model `tracker.projects` & FastAPI `ProjectCreate` schema.
- * Dynamically binds to real database LOV options returned by `GET /projects/lov`.
+ * Clean ProjectForm Component
+ * - Mobile view: Rendered flat as-is without card borders or background padding.
+ * - Tablet/Desktop view: Rendered inside a clean card container.
  */
 export function ProjectForm({ initialValues = null, onSubmit, isLoading = false, submitLabel = "Create Project" }) {
   const todayStr = new Date().toISOString().split("T")[0]
@@ -39,7 +39,6 @@ export function ProjectForm({ initialValues = null, onSubmit, isLoading = false,
 
   const [errors, setErrors] = useState({})
 
-  // Fetch LOVs directly from backend GET /projects/lov
   useEffect(() => {
     async function fetchLOVs() {
       setLovsLoading(true)
@@ -54,7 +53,6 @@ export function ProjectForm({ initialValues = null, onSubmit, isLoading = false,
 
         setLovs({ categories, priorities, project_types, statuses })
 
-        // Auto select first option for unselected mandatory LOV fields using backend UUIDs
         setFormData((prev) => ({
           ...prev,
           category_id: prev.category_id || categories[0]?.id || "",
@@ -71,7 +69,6 @@ export function ProjectForm({ initialValues = null, onSubmit, isLoading = false,
     fetchLOVs()
   }, [])
 
-  // Auto-calculate estimated_duration when planned dates change
   useEffect(() => {
     if (formData.planned_start_date && formData.planned_end_date) {
       const start = new Date(formData.planned_start_date)
@@ -95,26 +92,20 @@ export function ProjectForm({ initialValues = null, onSubmit, isLoading = false,
   const validate = () => {
     const newErrors = {}
 
-    if (!formData.project_name.trim()) newErrors.project_name = "Project Name is mandatory."
-    if (!formData.category_id) newErrors.category_id = "Category selection is mandatory."
-    if (!formData.project_type_id) newErrors.project_type_id = "Project Type selection is mandatory."
-    if (!formData.priority_id) newErrors.priority_id = "Priority selection is mandatory."
-    if (!formData.status_id) newErrors.status_id = "Status selection is mandatory."
-    if (!formData.planned_start_date) newErrors.planned_start_date = "Planned Start Date is mandatory."
-    if (!formData.planned_end_date) newErrors.planned_end_date = "Planned End Date is mandatory."
+    if (!formData.project_name.trim()) newErrors.project_name = "Project Name is required."
+    if (!formData.category_id) newErrors.category_id = "Category selection is required."
+    if (!formData.project_type_id) newErrors.project_type_id = "Project Type is required."
+    if (!formData.priority_id) newErrors.priority_id = "Priority selection is required."
+    if (!formData.status_id) newErrors.status_id = "Status selection is required."
+    if (!formData.planned_start_date) newErrors.planned_start_date = "Planned Start Date is required."
+    if (!formData.planned_end_date) newErrors.planned_end_date = "Planned End Date is required."
     if (!formData.estimated_duration || parseInt(formData.estimated_duration, 10) < 1) {
-      newErrors.estimated_duration = "Estimated Duration (≥ 1 day) is mandatory."
+      newErrors.estimated_duration = "Valid duration (≥ 1 day) required."
     }
 
     if (formData.planned_start_date && formData.planned_end_date) {
       if (new Date(formData.planned_end_date) < new Date(formData.planned_start_date)) {
-        newErrors.planned_end_date = "Planned End Date cannot be earlier than Start Date."
-      }
-    }
-
-    if (formData.actual_start_date && formData.actual_end_date) {
-      if (new Date(formData.actual_end_date) < new Date(formData.actual_start_date)) {
-        newErrors.actual_end_date = "Actual End Date cannot be earlier than Actual Start Date."
+        newErrors.planned_end_date = "End date cannot be earlier than start date."
       }
     }
 
@@ -144,24 +135,27 @@ export function ProjectForm({ initialValues = null, onSubmit, isLoading = false,
   }
 
   return (
-    <form onSubmit={handleSubmit} className="max-w-2xl mx-auto space-y-5 bg-card border border-border/80 p-5 sm:p-6 rounded-2xl shadow-sm">
+    <form
+      onSubmit={handleSubmit}
+      className="bg-transparent border-0 shadow-none p-0 sm:bg-card sm:border sm:border-border/80 sm:p-8 sm:rounded-3xl sm:shadow-xl space-y-6 font-roboto"
+    >
       
-      {/* SECTION 1: BASIC INFORMATION */}
-      <div className="space-y-3">
-        <div className="flex items-center gap-2 text-blue-600 font-extrabold text-sm">
-          <div className="h-5 w-5 rounded-full bg-blue-500/10 flex items-center justify-center text-blue-600 shrink-0">
-            <Info className="h-3.5 w-3.5 stroke-[2.5]" />
+      {/* SECTION 1: BASIC DETAILS */}
+      <div className="space-y-4">
+        <div className="flex items-center gap-2 pb-2 border-b border-border/50">
+          <div className="h-7 w-7 rounded-xl bg-blue-500/10 text-blue-600 flex items-center justify-center shrink-0">
+            <Info className="h-4 w-4 stroke-[2.2]" />
           </div>
-          <span>Basic Information</span>
+          <span className="font-poppins text-sm font-semibold text-foreground">Basic Details</span>
         </div>
 
-        {/* Project Name (MANDATORY) */}
-        <div className="space-y-1">
+        {/* Project Name */}
+        <div className="space-y-1.5">
           <div className="flex items-center justify-between">
-            <Label htmlFor="project_name" className="text-xs font-bold text-foreground">
-              Project Name <span className="text-red-500 font-bold">*</span>
+            <Label htmlFor="project_name" className="text-xs font-semibold text-foreground">
+              Project Name <span className="text-blue-600 font-bold">*</span>
             </Label>
-            <span className="text-[11px] font-bold text-red-500">* Required</span>
+            <span className="text-[10px] text-muted-foreground font-medium">Required</span>
           </div>
           <Input
             id="project_name"
@@ -171,167 +165,175 @@ export function ProjectForm({ initialValues = null, onSubmit, isLoading = false,
             disabled={isLoading}
             value={formData.project_name}
             onChange={handleChange}
-            className={`h-9 text-xs rounded-lg bg-muted/20 border-border/80 focus-visible:ring-blue-600 ${
-              errors.project_name ? "border-red-500" : ""
+            className={`h-10 text-xs rounded-xl bg-muted/30 border-border/70 focus-visible:ring-2 focus-visible:ring-blue-500/20 focus-visible:border-blue-500 transition-all ${
+              errors.project_name ? "border-rose-500 bg-rose-500/5" : ""
             }`}
           />
           {errors.project_name && (
-            <p className="text-[11px] text-red-500 flex items-center gap-1 font-semibold">
+            <p className="text-[11px] text-rose-500 flex items-center gap-1 font-medium mt-1">
               <AlertCircle className="h-3 w-3" /> {errors.project_name}
             </p>
           )}
         </div>
 
-        {/* Project Description (OPTIONAL) */}
-        <div className="space-y-1">
-          <Label htmlFor="project_description" className="text-xs font-bold text-foreground">
-            Project Description (Optional)
+        {/* Project Description */}
+        <div className="space-y-1.5">
+          <Label htmlFor="project_description" className="text-xs font-semibold text-foreground">
+            Project Description <span className="text-muted-foreground font-normal">(Optional)</span>
           </Label>
           <textarea
             id="project_description"
             name="project_description"
-            rows={2}
-            placeholder="Detailed scope and objectives of the project..."
+            rows={3}
+            placeholder="Outline project objectives, scope, and key deliverables..."
             disabled={isLoading}
             value={formData.project_description}
             onChange={handleChange}
-            className="flex w-full rounded-lg border border-border/80 bg-muted/20 px-3 py-2 text-xs shadow-xs focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-blue-600 text-foreground resize-none"
+            className="flex w-full rounded-xl border border-border/70 bg-muted/30 px-3.5 py-2.5 text-xs shadow-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/20 focus-visible:border-blue-500 text-foreground resize-none transition-all placeholder:text-muted-foreground/60"
           />
         </div>
       </div>
 
-      <div className="border-t border-border/60" />
-
-      {/* SECTION 2: CLASSIFICATION & STATUS (LOVs) */}
-      <div className="space-y-3">
-        <div className="flex items-center gap-2 text-blue-600 font-extrabold text-sm">
-          <div className="h-5 w-5 rounded-full bg-blue-500/10 flex items-center justify-center text-blue-600 shrink-0">
-            <Layers className="h-3.5 w-3.5 stroke-[2.5]" />
+      {/* SECTION 2: CLASSIFICATION & PARAMETERS */}
+      <div className="space-y-4 pt-2">
+        <div className="flex items-center gap-2 pb-2 border-b border-border/50">
+          <div className="h-7 w-7 rounded-xl bg-indigo-500/10 text-indigo-600 flex items-center justify-center shrink-0">
+            <Layers className="h-4 w-4 stroke-[2.2]" />
           </div>
-          <span>Classification & Status</span>
+          <span className="font-poppins text-sm font-semibold text-foreground">Classification & Parameters</span>
           {lovsLoading && <Loader2 className="h-3.5 w-3.5 animate-spin text-blue-600 ml-auto" />}
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          {/* Category ID (MANDATORY) */}
-          <div className="space-y-1">
-            <Label htmlFor="category_id" className="text-xs font-bold text-foreground">
-              Category <span className="text-red-500 font-bold">*</span>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          {/* Category ID */}
+          <div className="space-y-1.5">
+            <Label htmlFor="category_id" className="text-xs font-semibold text-foreground">
+              Category <span className="text-blue-600 font-bold">*</span>
             </Label>
-            <select
-              id="category_id"
-              name="category_id"
-              disabled={isLoading || lovsLoading}
-              value={formData.category_id}
-              onChange={handleChange}
-              className={`flex h-9 w-full rounded-lg border bg-muted/20 px-3 text-xs font-semibold focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-blue-600 text-foreground ${
-                errors.category_id ? "border-red-500" : "border-border/80"
-              }`}
-            >
-              <option value="" disabled>Select Category</option>
-              {lovs.categories.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.name}
-                </option>
-              ))}
-            </select>
-            {errors.category_id && <p className="text-[11px] text-red-500 font-semibold">{errors.category_id}</p>}
+            <div className="relative">
+              <select
+                id="category_id"
+                name="category_id"
+                disabled={isLoading || lovsLoading}
+                value={formData.category_id}
+                onChange={handleChange}
+                className={`appearance-none flex h-10 w-full rounded-xl border bg-muted/30 px-3.5 text-xs font-medium text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/20 focus-visible:border-blue-500 transition-all ${
+                  errors.category_id ? "border-rose-500" : "border-border/70"
+                }`}
+              >
+                <option value="" disabled>Select Category</option>
+                {lovs.categories.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name}
+                  </option>
+                ))}
+              </select>
+              <ChevronDown className="absolute right-3 top-3 h-4 w-4 text-muted-foreground pointer-events-none" />
+            </div>
+            {errors.category_id && <p className="text-[11px] text-rose-500 font-medium">{errors.category_id}</p>}
           </div>
 
-          {/* Project Type ID (MANDATORY) */}
-          <div className="space-y-1">
-            <Label htmlFor="project_type_id" className="text-xs font-bold text-foreground">
-              Project Type <span className="text-red-500 font-bold">*</span>
+          {/* Project Type ID */}
+          <div className="space-y-1.5">
+            <Label htmlFor="project_type_id" className="text-xs font-semibold text-foreground">
+              Project Type <span className="text-blue-600 font-bold">*</span>
             </Label>
-            <select
-              id="project_type_id"
-              name="project_type_id"
-              disabled={isLoading || lovsLoading}
-              value={formData.project_type_id}
-              onChange={handleChange}
-              className={`flex h-9 w-full rounded-lg border bg-muted/20 px-3 text-xs font-semibold focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-blue-600 text-foreground ${
-                errors.project_type_id ? "border-red-500" : "border-border/80"
-              }`}
-            >
-              <option value="" disabled>Select Type</option>
-              {lovs.project_types.map((pt) => (
-                <option key={pt.id} value={pt.id}>
-                  {pt.name}
-                </option>
-              ))}
-            </select>
-            {errors.project_type_id && <p className="text-[11px] text-red-500 font-semibold">{errors.project_type_id}</p>}
+            <div className="relative">
+              <select
+                id="project_type_id"
+                name="project_type_id"
+                disabled={isLoading || lovsLoading}
+                value={formData.project_type_id}
+                onChange={handleChange}
+                className={`appearance-none flex h-10 w-full rounded-xl border bg-muted/30 px-3.5 text-xs font-medium text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/20 focus-visible:border-blue-500 transition-all ${
+                  errors.project_type_id ? "border-rose-500" : "border-border/70"
+                }`}
+              >
+                <option value="" disabled>Select Type</option>
+                {lovs.project_types.map((pt) => (
+                  <option key={pt.id} value={pt.id}>
+                    {pt.name}
+                  </option>
+                ))}
+              </select>
+              <ChevronDown className="absolute right-3 top-3 h-4 w-4 text-muted-foreground pointer-events-none" />
+            </div>
+            {errors.project_type_id && <p className="text-[11px] text-rose-500 font-medium">{errors.project_type_id}</p>}
           </div>
 
-          {/* Priority ID (MANDATORY) */}
-          <div className="space-y-1">
-            <Label htmlFor="priority_id" className="text-xs font-bold text-foreground">
-              Priority <span className="text-red-500 font-bold">*</span>
+          {/* Priority ID */}
+          <div className="space-y-1.5">
+            <Label htmlFor="priority_id" className="text-xs font-semibold text-foreground">
+              Priority <span className="text-blue-600 font-bold">*</span>
             </Label>
-            <select
-              id="priority_id"
-              name="priority_id"
-              disabled={isLoading || lovsLoading}
-              value={formData.priority_id}
-              onChange={handleChange}
-              className={`flex h-9 w-full rounded-lg border bg-muted/20 px-3 text-xs font-semibold focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-blue-600 text-foreground ${
-                errors.priority_id ? "border-red-500" : "border-border/80"
-              }`}
-            >
-              <option value="" disabled>Set Priority</option>
-              {lovs.priorities.map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.name}
-                </option>
-              ))}
-            </select>
-            {errors.priority_id && <p className="text-[11px] text-red-500 font-semibold">{errors.priority_id}</p>}
+            <div className="relative">
+              <select
+                id="priority_id"
+                name="priority_id"
+                disabled={isLoading || lovsLoading}
+                value={formData.priority_id}
+                onChange={handleChange}
+                className={`appearance-none flex h-10 w-full rounded-xl border bg-muted/30 px-3.5 text-xs font-medium text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/20 focus-visible:border-blue-500 transition-all ${
+                  errors.priority_id ? "border-rose-500" : "border-border/70"
+                }`}
+              >
+                <option value="" disabled>Set Priority</option>
+                {lovs.priorities.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.name}
+                  </option>
+                ))}
+              </select>
+              <ChevronDown className="absolute right-3 top-3 h-4 w-4 text-muted-foreground pointer-events-none" />
+            </div>
+            {errors.priority_id && <p className="text-[11px] text-rose-500 font-medium">{errors.priority_id}</p>}
           </div>
 
-          {/* Initial Status ID (MANDATORY) */}
-          <div className="space-y-1">
-            <Label htmlFor="status_id" className="text-xs font-bold text-foreground">
-              Initial Status <span className="text-red-500 font-bold">*</span>
+          {/* Initial Status ID */}
+          <div className="space-y-1.5">
+            <Label htmlFor="status_id" className="text-xs font-semibold text-foreground">
+              Initial Status <span className="text-blue-600 font-bold">*</span>
             </Label>
-            <select
-              id="status_id"
-              name="status_id"
-              disabled={isLoading || lovsLoading}
-              value={formData.status_id}
-              onChange={handleChange}
-              className={`flex h-9 w-full rounded-lg border bg-muted/20 px-3 text-xs font-semibold focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-blue-600 text-foreground ${
-                errors.status_id ? "border-red-500" : "border-border/80"
-              }`}
-            >
-              <option value="" disabled>Initial Status</option>
-              {lovs.statuses.map((s) => (
-                <option key={s.id} value={s.id}>
-                  {s.name}
-                </option>
-              ))}
-            </select>
-            {errors.status_id && <p className="text-[11px] text-red-500 font-semibold">{errors.status_id}</p>}
+            <div className="relative">
+              <select
+                id="status_id"
+                name="status_id"
+                disabled={isLoading || lovsLoading}
+                value={formData.status_id}
+                onChange={handleChange}
+                className={`appearance-none flex h-10 w-full rounded-xl border bg-muted/30 px-3.5 text-xs font-medium text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/20 focus-visible:border-blue-500 transition-all ${
+                  errors.status_id ? "border-rose-500" : "border-border/70"
+                }`}
+              >
+                <option value="" disabled>Initial Status</option>
+                {lovs.statuses.map((s) => (
+                  <option key={s.id} value={s.id}>
+                    {s.name}
+                  </option>
+                ))}
+              </select>
+              <ChevronDown className="absolute right-3 top-3 h-4 w-4 text-muted-foreground pointer-events-none" />
+            </div>
+            {errors.status_id && <p className="text-[11px] text-rose-500 font-medium">{errors.status_id}</p>}
           </div>
         </div>
       </div>
 
-      <div className="border-t border-border/60" />
-
-      {/* SECTION 3: TIMELINE & DATES */}
-      <div className="space-y-3">
-        <div className="flex items-center gap-2 text-blue-600 font-extrabold text-sm">
-          <div className="h-5 w-5 rounded-full bg-blue-500/10 flex items-center justify-center text-blue-600 shrink-0">
-            <Calendar className="h-3.5 w-3.5 stroke-[2.5]" />
+      {/* SECTION 3: TIMELINE & DURATION */}
+      <div className="space-y-4 pt-2">
+        <div className="flex items-center gap-2 pb-2 border-b border-border/50">
+          <div className="h-7 w-7 rounded-xl bg-purple-500/10 text-purple-600 flex items-center justify-center shrink-0">
+            <Calendar className="h-4 w-4 stroke-[2.2]" />
           </div>
-          <span>Timeline & Dates</span>
+          <span className="font-poppins text-sm font-semibold text-foreground">Timeline & Duration</span>
         </div>
 
         {/* Mandatory Dates Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-          {/* Planned Start Date (MANDATORY) */}
-          <div className="space-y-1">
-            <Label htmlFor="planned_start_date" className="text-xs font-bold text-foreground">
-              Planned Start <span className="text-red-500 font-bold">*</span>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          {/* Planned Start Date */}
+          <div className="space-y-1.5">
+            <Label htmlFor="planned_start_date" className="text-xs font-semibold text-foreground">
+              Planned Start <span className="text-blue-600 font-bold">*</span>
             </Label>
             <Input
               id="planned_start_date"
@@ -340,17 +342,17 @@ export function ProjectForm({ initialValues = null, onSubmit, isLoading = false,
               disabled={isLoading}
               value={formData.planned_start_date}
               onChange={handleChange}
-              className={`h-9 text-xs rounded-lg bg-muted/20 border-border/80 focus-visible:ring-blue-600 ${
-                errors.planned_start_date ? "border-red-500" : ""
+              className={`h-10 text-xs rounded-xl bg-muted/30 border-border/70 focus-visible:ring-2 focus-visible:ring-blue-500/20 ${
+                errors.planned_start_date ? "border-rose-500" : ""
               }`}
             />
-            {errors.planned_start_date && <p className="text-[11px] text-red-500 font-semibold">{errors.planned_start_date}</p>}
+            {errors.planned_start_date && <p className="text-[11px] text-rose-500 font-medium">{errors.planned_start_date}</p>}
           </div>
 
-          {/* Planned End Date (MANDATORY) */}
-          <div className="space-y-1">
-            <Label htmlFor="planned_end_date" className="text-xs font-bold text-foreground">
-              Planned End <span className="text-red-500 font-bold">*</span>
+          {/* Planned End Date */}
+          <div className="space-y-1.5">
+            <Label htmlFor="planned_end_date" className="text-xs font-semibold text-foreground">
+              Planned End <span className="text-blue-600 font-bold">*</span>
             </Label>
             <Input
               id="planned_end_date"
@@ -359,17 +361,17 @@ export function ProjectForm({ initialValues = null, onSubmit, isLoading = false,
               disabled={isLoading}
               value={formData.planned_end_date}
               onChange={handleChange}
-              className={`h-9 text-xs rounded-lg bg-muted/20 border-border/80 focus-visible:ring-blue-600 ${
-                errors.planned_end_date ? "border-red-500" : ""
+              className={`h-10 text-xs rounded-xl bg-muted/30 border-border/70 focus-visible:ring-2 focus-visible:ring-blue-500/20 ${
+                errors.planned_end_date ? "border-rose-500" : ""
               }`}
             />
-            {errors.planned_end_date && <p className="text-[11px] text-red-500 font-semibold">{errors.planned_end_date}</p>}
+            {errors.planned_end_date && <p className="text-[11px] text-rose-500 font-medium">{errors.planned_end_date}</p>}
           </div>
 
-          {/* Estimated Duration (MANDATORY) */}
-          <div className="space-y-1">
-            <Label htmlFor="estimated_duration" className="text-xs font-bold text-foreground">
-              Est. Duration (Days) <span className="text-red-500 font-bold">*</span>
+          {/* Estimated Duration */}
+          <div className="space-y-1.5">
+            <Label htmlFor="estimated_duration" className="text-xs font-semibold text-foreground">
+              Est. Duration (Days) <span className="text-blue-600 font-bold">*</span>
             </Label>
             <Input
               id="estimated_duration"
@@ -380,20 +382,20 @@ export function ProjectForm({ initialValues = null, onSubmit, isLoading = false,
               disabled={isLoading}
               value={formData.estimated_duration}
               onChange={handleChange}
-              className={`h-9 text-xs rounded-lg bg-muted/20 border-border/80 focus-visible:ring-blue-600 ${
-                errors.estimated_duration ? "border-red-500" : ""
+              className={`h-10 text-xs rounded-xl bg-muted/30 border-border/70 focus-visible:ring-2 focus-visible:ring-blue-500/20 ${
+                errors.estimated_duration ? "border-rose-500" : ""
               }`}
             />
-            {errors.estimated_duration && <p className="text-[11px] text-red-500 font-semibold">{errors.estimated_duration}</p>}
+            {errors.estimated_duration && <p className="text-[11px] text-rose-500 font-medium">{errors.estimated_duration}</p>}
           </div>
         </div>
 
         {/* Optional Dates Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
-          {/* Actual Start Date (OPTIONAL) */}
-          <div className="space-y-1">
-            <Label htmlFor="actual_start_date" className="text-xs font-bold text-foreground">
-              Actual Start (Optional)
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1">
+          {/* Actual Start Date */}
+          <div className="space-y-1.5">
+            <Label htmlFor="actual_start_date" className="text-xs font-semibold text-foreground">
+              Actual Start <span className="text-muted-foreground font-normal">(Optional)</span>
             </Label>
             <Input
               id="actual_start_date"
@@ -402,14 +404,14 @@ export function ProjectForm({ initialValues = null, onSubmit, isLoading = false,
               disabled={isLoading}
               value={formData.actual_start_date}
               onChange={handleChange}
-              className="h-9 text-xs rounded-lg bg-muted/20 border-border/80 focus-visible:ring-blue-600"
+              className="h-10 text-xs rounded-xl bg-muted/30 border-border/70 focus-visible:ring-2 focus-visible:ring-blue-500/20"
             />
           </div>
 
-          {/* Actual End Date (OPTIONAL) */}
-          <div className="space-y-1">
-            <Label htmlFor="actual_end_date" className="text-xs font-bold text-foreground">
-              Actual End (Optional)
+          {/* Actual End Date */}
+          <div className="space-y-1.5">
+            <Label htmlFor="actual_end_date" className="text-xs font-semibold text-foreground">
+              Actual End <span className="text-muted-foreground font-normal">(Optional)</span>
             </Label>
             <Input
               id="actual_end_date"
@@ -418,22 +420,22 @@ export function ProjectForm({ initialValues = null, onSubmit, isLoading = false,
               disabled={isLoading}
               value={formData.actual_end_date}
               onChange={handleChange}
-              className="h-9 text-xs rounded-lg bg-muted/20 border-border/80 focus-visible:ring-blue-600"
+              className="h-10 text-xs rounded-xl bg-muted/30 border-border/70 focus-visible:ring-2 focus-visible:ring-blue-500/20"
             />
           </div>
         </div>
       </div>
 
       {/* Form Submission Footer */}
-      <div className="pt-3 border-t border-border/60 flex items-center justify-end gap-3">
+      <div className="pt-4 border-t border-border/60 flex items-center justify-end gap-3">
         <Button
           type="submit"
           disabled={isLoading || lovsLoading}
-          className="h-9 px-6 font-bold text-xs rounded-lg bg-blue-600 text-white hover:bg-blue-700 shadow-sm cursor-pointer"
+          className="w-full sm:w-auto h-10 px-8 font-poppins font-semibold text-xs rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-md shadow-blue-500/20 active:scale-95 transition-all cursor-pointer"
         >
           {isLoading ? (
             <>
-              <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> Saving...
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Saving Project...
             </>
           ) : (
             submitLabel
