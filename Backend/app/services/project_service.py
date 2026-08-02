@@ -8,6 +8,7 @@ from app.models.lov.category import Category
 from app.models.lov.priority import Priority
 from app.models.lov.project_type import ProjectType
 from app.models.lov.status import Status
+from app.models.lov.task_type import TaskType
 from app.services.schemas.project import (
     CreateProjectResponse,
     LOVItem,
@@ -39,12 +40,17 @@ class ProjectService:
             LOVItem(id=c.category_id, name=c.category_name) 
             for c in db.query(Category).filter(Category.is_active == True).all()
         ]
+        task_types = [
+            LOVItem(id=tt.task_type_id, name=tt.type_name) 
+            for tt in db.query(TaskType).filter(TaskType.is_active == True).all()
+        ]
 
         return ProjectLOVResponse(
             statuses=statuses,
             priorities=priorities,
             project_types=project_types,
             categories=categories,
+            task_types=task_types,
         )
 
     @staticmethod

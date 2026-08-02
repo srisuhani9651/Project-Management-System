@@ -927,6 +927,14 @@
             },
             "type": "array",
             "title": "Categories"
+          },
+          "task_types": {
+            "items": {
+              "$ref": "#/components/schemas/LOVItem"
+            },
+            "type": "array",
+            "title": "Task Types",
+            "default": []
           }
         },
         "type": "object",

@@ -85,3 +85,4 @@ class ProjectLOVResponse(BaseModel):
     priorities: List[LOVItem]
     project_types: List[LOVItem]
     categories: List[LOVItem]
+    task_types: List[LOVItem] = []
