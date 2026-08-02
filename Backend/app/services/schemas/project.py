@@ -6,17 +6,17 @@ from pydantic import BaseModel, Field
 
 class ProjectCreate(BaseModel):
     """Schema for creating a project."""
-    project_name: str = Field(..., min_length=1, max_length=255, description="Name of the project")
-    project_description: Optional[str] = Field(None, max_length=255, description="Description of the project")
-    status_id: Optional[UUID] = None
-    priority_id: Optional[UUID] = None
-    project_type_id: Optional[UUID] = None
-    category_id: Optional[UUID] = None
-    planned_start_date: Optional[datetime] = None
-    planned_end_date: Optional[datetime] = None
-    actual_start_date: Optional[datetime] = None
-    actual_end_date: Optional[datetime] = None
-    estimated_duration: Optional[int] = None
+    project_name: str = Field(..., min_length=1, max_length=255, description="Name of the project (Mandatory)")
+    status_id: UUID = Field(..., description="Status ID (Mandatory)")
+    priority_id: UUID = Field(..., description="Priority ID (Mandatory)")
+    project_type_id: UUID = Field(..., description="Project Type ID (Mandatory)")
+    category_id: UUID = Field(..., description="Category ID (Mandatory)")
+    planned_start_date: datetime = Field(..., description="Planned start date (Mandatory)")
+    planned_end_date: datetime = Field(..., description="Planned end date (Mandatory)")
+    estimated_duration: int = Field(..., ge=1, description="Estimated duration in days (Mandatory)")
+    project_description: Optional[str] = Field(None, max_length=255, description="Description of the project (Optional)")
+    actual_start_date: Optional[datetime] = Field(None, description="Actual start date (Optional)")
+    actual_end_date: Optional[datetime] = Field(None, description="Actual end date (Optional)")
 
 
 class ProjectUpdate(BaseModel):

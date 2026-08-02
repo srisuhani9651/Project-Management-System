@@ -800,7 +800,49 @@
             "maxLength": 255,
             "minLength": 1,
             "title": "Project Name",
-            "description": "Name of the project"
+            "description": "Name of the project (Mandatory)"
+          },
+          "status_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Status Id",
+            "description": "Status ID (Mandatory)"
+          },
+          "priority_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Priority Id",
+            "description": "Priority ID (Mandatory)"
+          },
+          "project_type_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Project Type Id",
+            "description": "Project Type ID (Mandatory)"
+          },
+          "category_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Category Id",
+            "description": "Category ID (Mandatory)"
+          },
+          "planned_start_date": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Planned Start Date",
+            "description": "Planned start date (Mandatory)"
+          },
+          "planned_end_date": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Planned End Date",
+            "description": "Planned end date (Mandatory)"
+          },
+          "estimated_duration": {
+            "type": "integer",
+            "minimum": 1.0,
+            "title": "Estimated Duration",
+            "description": "Estimated duration in days (Mandatory)"
           },
           "project_description": {
             "anyOf": [
@@ -813,79 +855,7 @@
               }
             ],
             "title": "Project Description",
-            "description": "Description of the project"
-          },
-          "status_id": {
-            "anyOf": [
-              {
-                "type": "string",
-                "format": "uuid"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Status Id"
-          },
-          "priority_id": {
-            "anyOf": [
-              {
-                "type": "string",
-                "format": "uuid"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Priority Id"
-          },
-          "project_type_id": {
-            "anyOf": [
-              {
-                "type": "string",
-                "format": "uuid"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Project Type Id"
-          },
-          "category_id": {
-            "anyOf": [
-              {
-                "type": "string",
-                "format": "uuid"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Category Id"
-          },
-          "planned_start_date": {
-            "anyOf": [
-              {
-                "type": "string",
-                "format": "date-time"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Planned Start Date"
-          },
-          "planned_end_date": {
-            "anyOf": [
-              {
-                "type": "string",
-                "format": "date-time"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Planned End Date"
+            "description": "Description of the project (Optional)"
           },
           "actual_start_date": {
             "anyOf": [
@@ -897,7 +867,8 @@
                 "type": "null"
               }
             ],
-            "title": "Actual Start Date"
+            "title": "Actual Start Date",
+            "description": "Actual start date (Optional)"
           },
           "actual_end_date": {
             "anyOf": [
@@ -909,23 +880,20 @@
                 "type": "null"
               }
             ],
-            "title": "Actual End Date"
-          },
-          "estimated_duration": {
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Estimated Duration"
+            "title": "Actual End Date",
+            "description": "Actual end date (Optional)"
           }
         },
         "type": "object",
         "required": [
-          "project_name"
+          "project_name",
+          "status_id",
+          "priority_id",
+          "project_type_id",
+          "category_id",
+          "planned_start_date",
+          "planned_end_date",
+          "estimated_duration"
         ],
         "title": "ProjectCreate",
         "description": "Schema for creating a project."

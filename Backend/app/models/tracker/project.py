@@ -28,22 +28,22 @@ class Project(Base):
     project_description = Column(String(255), nullable=True)
 
     # Foreign Keys to LOV tables
-    status_id= Column(UUID(as_uuid=True), ForeignKey("lov.master_status.status_id"), nullable=True)
-    priority_id= Column(UUID(as_uuid=True), ForeignKey("lov.master_priority.priority_id"), nullable=True)
-    project_type_id = Column(UUID(as_uuid=True), ForeignKey("lov.master_project_type.project_type_id"), nullable=True)
-    category_id = Column(UUID(as_uuid=True), ForeignKey("lov.master_category.category_id"), nullable=True)
+    status_id= Column(UUID(as_uuid=True), ForeignKey("lov.master_status.status_id"), nullable=False)
+    priority_id= Column(UUID(as_uuid=True), ForeignKey("lov.master_priority.priority_id"), nullable=False)
+    project_type_id = Column(UUID(as_uuid=True), ForeignKey("lov.master_project_type.project_type_id"), nullable=False)
+    category_id = Column(UUID(as_uuid=True), ForeignKey("lov.master_category.category_id"), nullable=False)
 
     # Dates and Timeline
-    planned_start_date = Column(DateTime(timezone=True), nullable=True)
-    planned_end_date = Column(DateTime(timezone=True), nullable=True)
+    planned_start_date = Column(DateTime(timezone=True), nullable=False)
+    planned_end_date = Column(DateTime(timezone=True), nullable=False)
     actual_start_date = Column(DateTime(timezone=True), nullable=True)
     actual_end_date = Column(DateTime(timezone=True), nullable=True)
-    estimated_duration = Column(Integer, nullable=True)
+    estimated_duration = Column(Integer, nullable=False)
 
     # Audit and Creator Information
-    created_by = Column(UUID(as_uuid=True), ForeignKey("auth.user_master.user_id"), nullable=True)
+    created_by = Column(UUID(as_uuid=True), ForeignKey("auth.user_master.user_id"), nullable=False)
     is_active = Column(Boolean, nullable=False, default=True)
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     updated_at = Column(
         DateTime(timezone=True),
         server_default=func.now(),
