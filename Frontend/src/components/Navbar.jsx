@@ -14,17 +14,16 @@ import {
 import { useProject } from "@/context/ProjectContext"
 import { Input } from "@/components/ui/input"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
-import { NotificationDropdown } from "@/components/layout/NotificationDropdown"
 
 /**
  * Top Navbar Component
- * Features workspace brand logo, navigation links, quick search bar,
- * "+ New Project" action button, notification dropdown, settings, and profile popup.
+ * Streamlined navigation header: Brand logo, Dashboard & Projects links, search bar,
+ * "+ New Project" action button, settings gear, and profile dropdown menu.
  */
 export function Navbar() {
   const navigate = useNavigate()
   const location = useLocation()
-  const { user, projects, logoutUser } = useProject()
+  const { user, logoutUser } = useProject()
   const [profileOpen, setProfileOpen] = useState(false)
   const [searchQuery, setSearchQuery] = useState("")
 
@@ -83,11 +82,6 @@ export function Navbar() {
               >
                 <Folder className="h-4 w-4" />
                 <span className="hidden sm:inline">Projects</span>
-                {projects.length > 0 && (
-                  <span className="font-poppins text-[10px] font-semibold px-1.5 py-0.2 rounded-full bg-muted text-muted-foreground">
-                    {projects.length}
-                  </span>
-                )}
               </button>
             </Link>
           </nav>
@@ -107,7 +101,7 @@ export function Navbar() {
           </div>
         </div>
 
-        {/* Right: Actions, Notifications, Settings & Profile */}
+        {/* Right: Actions, Settings & Profile */}
         <div className="flex items-center gap-2 sm:gap-3 shrink-0">
           
           {/* "+ New Project" CTA Button */}
@@ -119,9 +113,6 @@ export function Navbar() {
             <Plus className="h-3.5 w-3.5 stroke-[2.5]" />
             <span className="hidden sm:inline">New Project</span>
           </button>
-
-          {/* Notifications Dropdown */}
-          <NotificationDropdown />
 
           {/* Settings */}
           <button

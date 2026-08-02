@@ -80,9 +80,6 @@ export function Dashboard() {
           </h1>
           <p className="font-roboto text-xs sm:text-sm text-muted-foreground flex items-center gap-2">
             <span>Here is your current pending tasks, analytics, and productivity telemetry.</span>
-            <span className="inline-flex items-center gap-1 font-semibold text-blue-600 bg-blue-500/10 px-2 py-0.5 rounded-md text-[10px]">
-              <Sparkles className="h-3 w-3" /> Live Analytics Active
-            </span>
           </p>
         </div>
       </div>

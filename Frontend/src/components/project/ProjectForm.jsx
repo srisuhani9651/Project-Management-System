@@ -1,14 +1,15 @@
 import React, { useState, useEffect } from "react"
-import { AlertCircle, Calendar, Info, Layers, Loader2, ChevronDown } from "lucide-react"
+import { AlertCircle, Calendar, Info, Layers, Loader2 } from "lucide-react"
 import api from "@/services/api"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { CustomSelect } from "@/components/ui/custom-select"
+import { CustomDatePicker } from "@/components/ui/custom-date-picker"
 
 /**
- * Clean ProjectForm Component
- * - Mobile view: Rendered flat as-is without card borders or background padding.
- * - Tablet/Desktop view: Rendered inside a clean card container.
+ * Modern ProjectForm Component
+ * Integrated with CustomSelect dropdowns and CustomDatePicker for an ultra-modern UI.
  */
 export function ProjectForm({ initialValues = null, onSubmit, isLoading = false, submitLabel = "Create Project" }) {
   const todayStr = new Date().toISOString().split("T")[0]
@@ -83,6 +84,13 @@ export function ProjectForm({ initialValues = null, onSubmit, isLoading = false,
 
   const handleChange = (e) => {
     const { name, value } = e.target
+    setFormData((prev) => ({ ...prev, [name]: value }))
+    if (errors[name]) {
+      setErrors((prev) => ({ ...prev, [name]: "" }))
+    }
+  }
+
+  const handleCustomSelectChange = (name, value) => {
     setFormData((prev) => ({ ...prev, [name]: value }))
     if (errors[name]) {
       setErrors((prev) => ({ ...prev, [name]: "" }))
@@ -165,7 +173,7 @@ export function ProjectForm({ initialValues = null, onSubmit, isLoading = false,
             disabled={isLoading}
             value={formData.project_name}
             onChange={handleChange}
-            className={`h-10 text-xs rounded-xl bg-muted/30 border-border/70 focus-visible:ring-2 focus-visible:ring-blue-500/20 focus-visible:border-blue-500 transition-all ${
+            className={`h-10 text-xs rounded-xl bg-muted/20 border-border/70 focus-visible:ring-2 focus-visible:ring-blue-500/20 focus-visible:border-blue-500 transition-all ${
               errors.project_name ? "border-rose-500 bg-rose-500/5" : ""
             }`}
           />
@@ -189,7 +197,7 @@ export function ProjectForm({ initialValues = null, onSubmit, isLoading = false,
             disabled={isLoading}
             value={formData.project_description}
             onChange={handleChange}
-            className="flex w-full rounded-xl border border-border/70 bg-muted/30 px-3.5 py-2.5 text-xs shadow-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/20 focus-visible:border-blue-500 text-foreground resize-none transition-all placeholder:text-muted-foreground/60"
+            className="flex w-full rounded-xl border border-border/70 bg-muted/20 px-3.5 py-2.5 text-xs shadow-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/20 focus-visible:border-blue-500 text-foreground resize-none transition-all placeholder:text-muted-foreground/60"
           />
         </div>
       </div>
@@ -207,113 +215,65 @@ export function ProjectForm({ initialValues = null, onSubmit, isLoading = false,
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           {/* Category ID */}
           <div className="space-y-1.5">
-            <Label htmlFor="category_id" className="text-xs font-semibold text-foreground">
+            <Label className="text-xs font-semibold text-foreground">
               Category <span className="text-blue-600 font-bold">*</span>
             </Label>
-            <div className="relative">
-              <select
-                id="category_id"
-                name="category_id"
-                disabled={isLoading || lovsLoading}
-                value={formData.category_id}
-                onChange={handleChange}
-                className={`appearance-none flex h-10 w-full rounded-xl border bg-muted/30 px-3.5 text-xs font-medium text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/20 focus-visible:border-blue-500 transition-all ${
-                  errors.category_id ? "border-rose-500" : "border-border/70"
-                }`}
-              >
-                <option value="" disabled>Select Category</option>
-                {lovs.categories.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.name}
-                  </option>
-                ))}
-              </select>
-              <ChevronDown className="absolute right-3 top-3 h-4 w-4 text-muted-foreground pointer-events-none" />
-            </div>
+            <CustomSelect
+              options={lovs.categories}
+              value={formData.category_id}
+              onChange={(e) => handleCustomSelectChange("category_id", e.target.value)}
+              placeholder="Select Category"
+              disabled={isLoading || lovsLoading}
+              error={!!errors.category_id}
+            />
             {errors.category_id && <p className="text-[11px] text-rose-500 font-medium">{errors.category_id}</p>}
           </div>
 
           {/* Project Type ID */}
           <div className="space-y-1.5">
-            <Label htmlFor="project_type_id" className="text-xs font-semibold text-foreground">
+            <Label className="text-xs font-semibold text-foreground">
               Project Type <span className="text-blue-600 font-bold">*</span>
             </Label>
-            <div className="relative">
-              <select
-                id="project_type_id"
-                name="project_type_id"
-                disabled={isLoading || lovsLoading}
-                value={formData.project_type_id}
-                onChange={handleChange}
-                className={`appearance-none flex h-10 w-full rounded-xl border bg-muted/30 px-3.5 text-xs font-medium text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/20 focus-visible:border-blue-500 transition-all ${
-                  errors.project_type_id ? "border-rose-500" : "border-border/70"
-                }`}
-              >
-                <option value="" disabled>Select Type</option>
-                {lovs.project_types.map((pt) => (
-                  <option key={pt.id} value={pt.id}>
-                    {pt.name}
-                  </option>
-                ))}
-              </select>
-              <ChevronDown className="absolute right-3 top-3 h-4 w-4 text-muted-foreground pointer-events-none" />
-            </div>
+            <CustomSelect
+              options={lovs.project_types}
+              value={formData.project_type_id}
+              onChange={(e) => handleCustomSelectChange("project_type_id", e.target.value)}
+              placeholder="Select Type"
+              disabled={isLoading || lovsLoading}
+              error={!!errors.project_type_id}
+            />
             {errors.project_type_id && <p className="text-[11px] text-rose-500 font-medium">{errors.project_type_id}</p>}
           </div>
 
           {/* Priority ID */}
           <div className="space-y-1.5">
-            <Label htmlFor="priority_id" className="text-xs font-semibold text-foreground">
+            <Label className="text-xs font-semibold text-foreground">
               Priority <span className="text-blue-600 font-bold">*</span>
             </Label>
-            <div className="relative">
-              <select
-                id="priority_id"
-                name="priority_id"
-                disabled={isLoading || lovsLoading}
-                value={formData.priority_id}
-                onChange={handleChange}
-                className={`appearance-none flex h-10 w-full rounded-xl border bg-muted/30 px-3.5 text-xs font-medium text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/20 focus-visible:border-blue-500 transition-all ${
-                  errors.priority_id ? "border-rose-500" : "border-border/70"
-                }`}
-              >
-                <option value="" disabled>Set Priority</option>
-                {lovs.priorities.map((p) => (
-                  <option key={p.id} value={p.id}>
-                    {p.name}
-                  </option>
-                ))}
-              </select>
-              <ChevronDown className="absolute right-3 top-3 h-4 w-4 text-muted-foreground pointer-events-none" />
-            </div>
+            <CustomSelect
+              options={lovs.priorities}
+              value={formData.priority_id}
+              onChange={(e) => handleCustomSelectChange("priority_id", e.target.value)}
+              placeholder="Set Priority"
+              disabled={isLoading || lovsLoading}
+              error={!!errors.priority_id}
+            />
             {errors.priority_id && <p className="text-[11px] text-rose-500 font-medium">{errors.priority_id}</p>}
           </div>
 
           {/* Initial Status ID */}
           <div className="space-y-1.5">
-            <Label htmlFor="status_id" className="text-xs font-semibold text-foreground">
+            <Label className="text-xs font-semibold text-foreground">
               Initial Status <span className="text-blue-600 font-bold">*</span>
             </Label>
-            <div className="relative">
-              <select
-                id="status_id"
-                name="status_id"
-                disabled={isLoading || lovsLoading}
-                value={formData.status_id}
-                onChange={handleChange}
-                className={`appearance-none flex h-10 w-full rounded-xl border bg-muted/30 px-3.5 text-xs font-medium text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/20 focus-visible:border-blue-500 transition-all ${
-                  errors.status_id ? "border-rose-500" : "border-border/70"
-                }`}
-              >
-                <option value="" disabled>Initial Status</option>
-                {lovs.statuses.map((s) => (
-                  <option key={s.id} value={s.id}>
-                    {s.name}
-                  </option>
-                ))}
-              </select>
-              <ChevronDown className="absolute right-3 top-3 h-4 w-4 text-muted-foreground pointer-events-none" />
-            </div>
+            <CustomSelect
+              options={lovs.statuses}
+              value={formData.status_id}
+              onChange={(e) => handleCustomSelectChange("status_id", e.target.value)}
+              placeholder="Initial Status"
+              disabled={isLoading || lovsLoading}
+              error={!!errors.status_id}
+            />
             {errors.status_id && <p className="text-[11px] text-rose-500 font-medium">{errors.status_id}</p>}
           </div>
         </div>
@@ -332,38 +292,30 @@ export function ProjectForm({ initialValues = null, onSubmit, isLoading = false,
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           {/* Planned Start Date */}
           <div className="space-y-1.5">
-            <Label htmlFor="planned_start_date" className="text-xs font-semibold text-foreground">
+            <Label className="text-xs font-semibold text-foreground">
               Planned Start <span className="text-blue-600 font-bold">*</span>
             </Label>
-            <Input
-              id="planned_start_date"
+            <CustomDatePicker
               name="planned_start_date"
-              type="date"
-              disabled={isLoading}
               value={formData.planned_start_date}
               onChange={handleChange}
-              className={`h-10 text-xs rounded-xl bg-muted/30 border-border/70 focus-visible:ring-2 focus-visible:ring-blue-500/20 ${
-                errors.planned_start_date ? "border-rose-500" : ""
-              }`}
+              disabled={isLoading}
+              error={!!errors.planned_start_date}
             />
             {errors.planned_start_date && <p className="text-[11px] text-rose-500 font-medium">{errors.planned_start_date}</p>}
           </div>
 
           {/* Planned End Date */}
           <div className="space-y-1.5">
-            <Label htmlFor="planned_end_date" className="text-xs font-semibold text-foreground">
+            <Label className="text-xs font-semibold text-foreground">
               Planned End <span className="text-blue-600 font-bold">*</span>
             </Label>
-            <Input
-              id="planned_end_date"
+            <CustomDatePicker
               name="planned_end_date"
-              type="date"
-              disabled={isLoading}
               value={formData.planned_end_date}
               onChange={handleChange}
-              className={`h-10 text-xs rounded-xl bg-muted/30 border-border/70 focus-visible:ring-2 focus-visible:ring-blue-500/20 ${
-                errors.planned_end_date ? "border-rose-500" : ""
-              }`}
+              disabled={isLoading}
+              error={!!errors.planned_end_date}
             />
             {errors.planned_end_date && <p className="text-[11px] text-rose-500 font-medium">{errors.planned_end_date}</p>}
           </div>
@@ -382,7 +334,7 @@ export function ProjectForm({ initialValues = null, onSubmit, isLoading = false,
               disabled={isLoading}
               value={formData.estimated_duration}
               onChange={handleChange}
-              className={`h-10 text-xs rounded-xl bg-muted/30 border-border/70 focus-visible:ring-2 focus-visible:ring-blue-500/20 ${
+              className={`h-10 text-xs rounded-xl bg-muted/20 border-border/70 focus-visible:ring-2 focus-visible:ring-blue-500/20 ${
                 errors.estimated_duration ? "border-rose-500" : ""
               }`}
             />
@@ -394,33 +346,27 @@ export function ProjectForm({ initialValues = null, onSubmit, isLoading = false,
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1">
           {/* Actual Start Date */}
           <div className="space-y-1.5">
-            <Label htmlFor="actual_start_date" className="text-xs font-semibold text-foreground">
+            <Label className="text-xs font-semibold text-foreground">
               Actual Start <span className="text-muted-foreground font-normal">(Optional)</span>
             </Label>
-            <Input
-              id="actual_start_date"
+            <CustomDatePicker
               name="actual_start_date"
-              type="date"
-              disabled={isLoading}
               value={formData.actual_start_date}
               onChange={handleChange}
-              className="h-10 text-xs rounded-xl bg-muted/30 border-border/70 focus-visible:ring-2 focus-visible:ring-blue-500/20"
+              disabled={isLoading}
             />
           </div>
 
           {/* Actual End Date */}
           <div className="space-y-1.5">
-            <Label htmlFor="actual_end_date" className="text-xs font-semibold text-foreground">
+            <Label className="text-xs font-semibold text-foreground">
               Actual End <span className="text-muted-foreground font-normal">(Optional)</span>
             </Label>
-            <Input
-              id="actual_end_date"
+            <CustomDatePicker
               name="actual_end_date"
-              type="date"
-              disabled={isLoading}
               value={formData.actual_end_date}
               onChange={handleChange}
-              className="h-10 text-xs rounded-xl bg-muted/30 border-border/70 focus-visible:ring-2 focus-visible:ring-blue-500/20"
+              disabled={isLoading}
             />
           </div>
         </div>
