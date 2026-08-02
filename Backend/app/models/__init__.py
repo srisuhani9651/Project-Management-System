@@ -8,6 +8,7 @@ from app.models.lov.project_type import ProjectType
 from app.models.lov.status import Status
 from app.models.lov.task_type import TaskType
 from app.models.tracker.project import Project
+from app.models.tracker.project_members import ProjectMember
 from app.models.tracker.tasks import Task
 
 __all__ = [
@@ -19,6 +20,8 @@ __all__ = [
     "Category",
     "ProjectType",
     "TaskType",
+    "ProjectMember",
 ]
+
 
 
