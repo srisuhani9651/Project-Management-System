@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from "react"
-import { Sparkles } from "lucide-react"
 import { useProject } from "@/context/ProjectContext"
 import api from "@/services/api"
 
@@ -7,15 +6,16 @@ import api from "@/services/api"
 import { ProjectTaskPieChart } from "@/components/dashboard/ProjectTaskPieChart"
 import { PendingTasksList } from "@/components/dashboard/PendingTasksList"
 import { TimebasedAnalytics } from "@/components/dashboard/TimebasedAnalytics"
-import { MonthDetailsView } from "@/components/dashboard/MonthDetailsView"
 import { ProductivityInsights } from "@/components/dashboard/ProductivityInsights"
 
 /**
- * Modern Streamlined Dashboard Page Component
+ * Modern Dynamic Dashboard Page Component
+ * Connects to single backend API /api/dashboard for real database metrics.
  */
 export function Dashboard() {
-  const { user, projects } = useProject()
-  const [tasks, setTasks] = useState([])
+  const { user, fetchProjects } = useProject()
+  const [telemetry, setTelemetry] = useState(null)
+  const [loading, setLoading] = useState(true)
 
   // Dynamic Greeting based on current hour
   const getGreeting = () => {
@@ -25,49 +25,94 @@ export function Dashboard() {
     return "Good Evening"
   }
 
-  const userName = user?.fullName || "Aditya Kumar"
+  const userName = user?.fullName || user?.full_name || "Suhani Srivastava"
 
-  // Fetch tasks from API on mount
-  useEffect(() => {
-    const fetchAllTasks = async () => {
-      try {
-        const res = await api.get("/tasks")
-        if (res.data && Array.isArray(res.data)) {
-          setTasks(res.data)
-        }
-      } catch (err) {
-        console.warn("Could not fetch tasks from API, using fallback data:", err)
+  // Fetch full dashboard telemetry from single API endpoint
+  const fetchDashboardData = async () => {
+    try {
+      setLoading(true)
+      const res = await api.get("/api/dashboard")
+      if (res.data) {
+        setTelemetry(res.data)
       }
-    }
-    if (user) {
-      fetchAllTasks()
-    }
-  }, [user])
-
-  // Toggle task status locally
-  const handleToggleTaskStatus = (taskToToggle) => {
-    setTasks((prev) =>
-      prev.map((t) => {
-        const tId = t.id || t.task_id
-        const targetId = taskToToggle.id || taskToToggle.task_id
-        if (tId === targetId) {
-          const currentStatus = (t.status || t.status_name || "").toLowerCase()
-          const newStatus = currentStatus === "done" || currentStatus === "completed" ? "To Do" : "Done"
-          return { ...t, status: newStatus, status_name: newStatus }
+    } catch (err) {
+      console.warn("Could not fetch /api/dashboard, trying fallback /dashboard:", err)
+      try {
+        const fallbackRes = await api.get("/dashboard")
+        if (fallbackRes.data) {
+          setTelemetry(fallbackRes.data)
         }
-        return t
-      })
-    )
+      } catch (fallbackErr) {
+        console.error("Dashboard API error:", fallbackErr)
+      }
+    } finally {
+      setLoading(false)
+    }
   }
 
-  const effectiveTasks = tasks.length > 0 ? tasks : [
-    { id: "t1", title: "Design dynamic analytics wireframes & color system", projectName: "Project management", status: "In Progress", priority: "High", dueDate: "Today, 5:00 PM", urgent: true },
-    { id: "t2", title: "Integrate JWT token authentication & policy check logic", projectName: "Inventory Management", status: "To Do", priority: "Medium", dueDate: "Tomorrow", urgent: false },
-    { id: "t3", title: "Optimize SVG pie chart responsiveness & legend tooltips", projectName: "New Web Application", status: "In Progress", priority: "Low", dueDate: "Aug 5, 2026", urgent: false },
-    { id: "t4", title: "Set up monthly productivity calculations API schema", projectName: "Project management", status: "To Do", priority: "High", dueDate: "Aug 6, 2026", urgent: true },
-    { id: "t5", title: "Refactor backend project service endpoints", projectName: "Inventory Management", status: "Done", priority: "Medium", dueDate: "Aug 1, 2026", urgent: false },
-    { id: "t6", title: "Setup automated CI/CD pipeline", projectName: "New Web Application", status: "Done", priority: "High", dueDate: "Jul 28, 2026", urgent: false }
-  ]
+  useEffect(() => {
+    fetchDashboardData()
+  }, [user])
+
+  // Handle task status toggle with backend database persistence
+  const handleToggleTaskStatus = async (taskToToggle) => {
+    const tId = taskToToggle.id || taskToToggle.task_id
+    if (!tId) return
+
+    const currentStatus = (taskToToggle.status || "").toLowerCase()
+    const isDone = currentStatus === "done" || currentStatus === "completed"
+
+    // Optimistic UI update
+    if (telemetry?.pendingTasks?.tasks) {
+      setTelemetry((prev) => ({
+        ...prev,
+        pendingTasks: {
+          ...prev.pendingTasks,
+          tasks: prev.pendingTasks.tasks.filter((t) => (t.id || t.task_id) !== tId),
+        },
+      }))
+    }
+
+    try {
+      // Fetch LOV status options to get matching status_id for target status
+      let statusId = null
+      const lovRes = await api.get("/projects/lov").catch(() => null)
+      if (lovRes?.data?.statuses) {
+        const statuses = lovRes.data.statuses
+        const matched = statuses.find((s) => {
+          const sName = (s.name || "").toLowerCase().trim()
+          if (isDone) {
+            return sName === "to do" || sName === "todo"
+          } else {
+            return sName === "completed" || sName === "done"
+          }
+        })
+        if (matched) {
+          statusId = matched.id
+        }
+      }
+
+      const updatePayload = {
+        completed_at: isDone ? null : new Date().toISOString(),
+      }
+      if (statusId) {
+        updatePayload.status_id = statusId
+      }
+
+      // Call backend API to persist task status change in database
+      await api.post(`/tasks/${tId}`, updatePayload).catch(() => {
+        return api.post(`/api/manage/task/${tId}`, updatePayload)
+      })
+
+      // Refetch updated live database telemetry
+      await fetchDashboardData()
+      if (fetchProjects) fetchProjects()
+    } catch (err) {
+      console.error("Failed to update task status on backend:", err)
+      // Refetch on error to revert to true database state
+      fetchDashboardData()
+    }
+  }
 
   return (
     <div className="flex-1 pb-16 pt-6 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto w-full space-y-8 animate-fade-in font-roboto">
@@ -90,18 +135,19 @@ export function Dashboard() {
         {/* Left Column (6 cols): Pending Tasks List */}
         <div className="lg:col-span-6 flex">
           <PendingTasksList
-            tasks={effectiveTasks}
+            pendingData={telemetry?.pendingTasks}
             onToggleTaskStatus={handleToggleTaskStatus}
             title="Pending Tasks"
+            loading={loading}
           />
         </div>
 
         {/* Right Column (6 cols): Project Task Distribution Pie Chart */}
         <div className="lg:col-span-6 flex">
           <ProjectTaskPieChart
-            projects={projects}
-            tasks={effectiveTasks}
+            distributionData={telemetry?.taskDistribution}
             title="Task Distribution by Project"
+            loading={loading}
           />
         </div>
 
@@ -112,19 +158,22 @@ export function Dashboard() {
         
         {/* Left Column (6 cols): Time-Based Past Analytics */}
         <div className="lg:col-span-6 flex">
-          <TimebasedAnalytics title="Past Time Analytics (Week / Month / Quarter)" />
+          <TimebasedAnalytics
+            analyticsData={telemetry?.timeAnalytics}
+            title="Past Time Analytics (Week / Month / Quarter)"
+            loading={loading}
+          />
         </div>
 
         {/* Right Column (6 cols): Productivity Insights */}
         <div className="lg:col-span-6 flex">
-          <ProductivityInsights title="Productivity Insights (Time Duration)" />
+          <ProductivityInsights
+            insightsData={telemetry?.productivityInsights}
+            title="Productivity Insights (Time Duration)"
+            loading={loading}
+          />
         </div>
 
-      </div>
-
-      {/* 4. SECTION 3: Specific Month Breakdown */}
-      <div className="w-full">
-        <MonthDetailsView title="Specific Month Details Breakdown" />
       </div>
 
     </div>

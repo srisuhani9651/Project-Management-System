@@ -115,7 +115,7 @@ export function Signup() {
     setIsLoading(true)
 
     try {
-      const response = await api.post("/register", {
+      const response = await api.post("/auth/register", {
         full_name: formData.fullName.trim(),
         email: formData.email.trim(),
         password: formData.password,

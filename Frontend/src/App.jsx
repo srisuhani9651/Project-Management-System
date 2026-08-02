@@ -13,6 +13,7 @@ import ProjectDetails from "@/pages/ProjectDetails"
 import Projects from "@/pages/Projects"
 import TaskDetails from "@/pages/TaskDetails"
 import Profile from "@/pages/Profile"
+import Settings from "@/pages/Settings"
 
 /** Redirects unauthenticated users to /login */
 function ProtectedRoute({ children }) {
@@ -76,7 +77,7 @@ function AppContent() {
           }
         />
 
-        {/* Authenticated Workspace Routes (Wrapped with AppLayout & Left Sidebar) */}
+        {/* Authenticated Workspace Routes */}
         <Route
           path="/dashboard"
           element={
@@ -137,12 +138,7 @@ function AppContent() {
           path="/settings"
           element={
             <ProtectedRoute>
-              <AppLayout>
-                <div className="flex-1 py-12 px-8 max-w-4xl mx-auto space-y-4">
-                  <h1 className="text-2xl font-bold">Workspace Settings</h1>
-                  <p className="text-xs text-muted-foreground">Manage project defaults, notification preferences, and team permissions.</p>
-                </div>
-              </AppLayout>
+              <AppLayout><Settings /></AppLayout>
             </ProtectedRoute>
           }
         />

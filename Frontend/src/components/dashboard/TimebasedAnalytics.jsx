@@ -5,58 +5,59 @@ import { TrendingUp, ArrowUpRight, Activity } from "lucide-react"
  * TimebasedAnalytics Component
  * Softened typography weights & cleaned contrast.
  */
-export function TimebasedAnalytics({ title = "Time-Based Task Analytics" }) {
+export function TimebasedAnalytics({ analyticsData, title = "Time-Based Task Analytics" }) {
   const [timeframe, setTimeframe] = useState("30d")
 
-  const analyticsData = {
+  const defaultAnalyticsData = {
     "7d": {
       periodLabel: "Last 7 Days",
-      created: 14,
-      completed: 18,
-      velocityChange: "+24%",
-      throughput: "92%",
-      avgDaysToComplete: 1.4,
+      created: 0,
+      completed: 0,
+      velocityChange: "+0%",
+      throughput: "0%",
+      avgDaysToComplete: 0,
       bars: [
-        { label: "Mon", created: 2, completed: 3 },
-        { label: "Tue", created: 3, completed: 4 },
-        { label: "Wed", created: 1, completed: 2 },
-        { label: "Thu", created: 4, completed: 3 },
-        { label: "Fri", created: 2, completed: 4 },
-        { label: "Sat", created: 1, completed: 1 },
-        { label: "Sun", created: 1, completed: 1 },
+        { label: "Mon", created: 0, completed: 0 },
+        { label: "Tue", created: 0, completed: 0 },
+        { label: "Wed", created: 0, completed: 0 },
+        { label: "Thu", created: 0, completed: 0 },
+        { label: "Fri", created: 0, completed: 0 },
+        { label: "Sat", created: 0, completed: 0 },
+        { label: "Sun", created: 0, completed: 0 },
       ],
     },
     "30d": {
       periodLabel: "Last 30 Days",
-      created: 48,
-      completed: 56,
-      velocityChange: "+18%",
-      throughput: "88%",
-      avgDaysToComplete: 2.1,
+      created: 0,
+      completed: 0,
+      velocityChange: "+0%",
+      throughput: "0%",
+      avgDaysToComplete: 0,
       bars: [
-        { label: "W1", created: 10, completed: 12 },
-        { label: "W2", created: 14, completed: 16 },
-        { label: "W3", created: 11, completed: 15 },
-        { label: "W4", created: 13, completed: 13 },
+        { label: "W1", created: 0, completed: 0 },
+        { label: "W2", created: 0, completed: 0 },
+        { label: "W3", created: 0, completed: 0 },
+        { label: "W4", created: 0, completed: 0 },
       ],
     },
     "90d": {
       periodLabel: "Last 90 Days",
-      created: 135,
-      completed: 152,
-      velocityChange: "+31%",
-      throughput: "94%",
-      avgDaysToComplete: 2.8,
+      created: 0,
+      completed: 0,
+      velocityChange: "+0%",
+      throughput: "0%",
+      avgDaysToComplete: 0,
       bars: [
-        { label: "May", created: 42, completed: 48 },
-        { label: "Jun", created: 45, completed: 50 },
-        { label: "Jul", created: 48, completed: 54 },
+        { label: "M1", created: 0, completed: 0 },
+        { label: "M2", created: 0, completed: 0 },
+        { label: "M3", created: 0, completed: 0 },
       ],
     },
   }
 
-  const currentData = analyticsData[timeframe] || analyticsData["30d"]
-  const maxVal = Math.max(...currentData.bars.map((b) => Math.max(b.created, b.completed)), 1)
+  const activeDataMap = analyticsData || defaultAnalyticsData
+  const currentData = activeDataMap[timeframe] || activeDataMap["30d"] || defaultAnalyticsData["30d"]
+  const maxVal = Math.max(...(currentData.bars || []).map((b) => Math.max(b.created || 0, b.completed || 0)), 1)
 
   return (
     <div className="flex flex-col justify-between p-5 rounded-2xl border border-border/80 bg-card hover:shadow-md transition-all space-y-4 w-full h-full font-roboto">

@@ -5,57 +5,58 @@ import { Zap, ShieldCheck, Target, Flame, Lightbulb, Clock, CheckCircle2 } from 
  * ProductivityInsights Component
  * Softened typography weights & clean styling.
  */
-export function ProductivityInsights({ title = "Productivity Insights" }) {
+export function ProductivityInsights({ insightsData, title = "Productivity Insights" }) {
   const [duration, setDuration] = useState("week")
 
-  const durationData = {
+  const defaultDurationData = {
     today: {
       label: "Today",
-      score: 94,
+      score: 100,
       status: "Peak Focus",
-      onTimeRate: "96%",
-      completedToday: 5,
-      goal: 6,
-      focusHours: "6.2 hrs",
-      velocity: "+15% vs yesterday",
-      insight: "You're operating at peak efficiency! Completing 1 more task will achieve today's sprint target.",
+      onTimeRate: "100%",
+      completedToday: 0,
+      goal: 0,
+      focusHours: "0.0 hrs",
+      velocity: "+0% overall",
+      insight: "No task activity recorded for today.",
     },
     week: {
       label: "This Week",
-      score: 89,
+      score: 100,
       status: "High Productivity",
-      onTimeRate: "92%",
-      completedToday: 24,
-      goal: 25,
-      focusHours: "31.5 hrs",
-      velocity: "+18% vs last week",
-      insight: "Peak productivity occurs on Tuesdays & Thursdays between 10 AM - 1 PM. Keep morning focus blocks reserved!",
+      onTimeRate: "100%",
+      completedToday: 0,
+      goal: 0,
+      focusHours: "0.0 hrs",
+      velocity: "+0% overall",
+      insight: "No task activity recorded for this week.",
     },
     month: {
       label: "This Month",
-      score: 86,
+      score: 100,
       status: "Consistent Output",
-      onTimeRate: "88%",
-      completedToday: 88,
-      goal: 100,
-      focusHours: "128 hrs",
-      velocity: "+12% vs last month",
-      insight: "High-priority tasks are resolved 2x faster than medium tasks. Great prioritization flow!",
+      onTimeRate: "100%",
+      completedToday: 0,
+      goal: 0,
+      focusHours: "0.0 hrs",
+      velocity: "+0% overall",
+      insight: "No task activity recorded for this month.",
     },
     ytd: {
       label: "Year to Date",
-      score: 91,
+      score: 100,
       status: "Exceptional",
-      onTimeRate: "94%",
-      completedToday: 340,
-      goal: 380,
-      focusHours: "520 hrs",
-      velocity: "+22% overall",
-      insight: "Overall task turnaround time improved by 1.2 days across all active projects.",
+      onTimeRate: "100%",
+      completedToday: 0,
+      goal: 0,
+      focusHours: "0.0 hrs",
+      velocity: "+0% overall",
+      insight: "No task activity recorded for YTD.",
     },
   }
 
-  const current = durationData[duration] || durationData["week"]
+  const activeDataMap = insightsData || defaultDurationData
+  const current = activeDataMap[duration] || activeDataMap["week"] || defaultDurationData["week"]
 
   return (
     <div className="flex flex-col justify-between p-5 rounded-2xl border border-border/80 bg-card hover:shadow-md transition-all space-y-4 w-full h-full font-roboto">

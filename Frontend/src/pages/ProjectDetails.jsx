@@ -17,7 +17,7 @@ import { EditProjectModal } from "@/components/project/EditProjectModal"
 export function ProjectDetails() {
   const { projectId, id } = useParams()
   const navigate = useNavigate()
-  const { projects, setProjects } = useProject()
+  const { projects, setProjects, fetchProjects } = useProject()
 
   const currentId = projectId || id
 
@@ -48,42 +48,26 @@ export function ProjectDetails() {
     projectKey: project.key,
   })
 
-  const [tasks, setTasks] = useState([
-    {
-      id: "t-101",
-      name: "Setup PostgreSQL Schema",
-      description: "Database tables creation and relationship indexing.",
-      priority: "High",
-      status: "Done",
-      dueDate: "Aug 5, 2026",
-      assignee: "Alex Rivera",
-      projectKey: project.key,
-    },
-    {
-      id: "t-102",
-      name: "React.js Integration",
-      description: "Frontend components state binding and route connection.",
-      priority: "Medium",
-      status: "In Progress",
-      dueDate: "Aug 12, 2026",
-      assignee: "Sarah Chen",
-      projectKey: project.key,
-    },
-  ])
+  const [tasks, setTasks] = useState([])
+
+  const fetchProjectTasks = async () => {
+    try {
+      let res
+      if (project?.id && !project.id.startsWith("proj-")) {
+        res = await api.get("/tasks", { params: { project_id: project.id } })
+      } else {
+        res = await api.get("/tasks")
+      }
+      if (Array.isArray(res.data)) {
+        const formatted = res.data.map(formatTaskObj)
+        setTasks(formatted)
+      }
+    } catch (err) {
+      console.warn("Failed to fetch project tasks from backend:", err)
+    }
+  }
 
   useEffect(() => {
-    async function fetchProjectTasks() {
-      if (!project?.id || project.id.startsWith("proj-")) return
-      try {
-        const res = await api.get("/tasks", { params: { project_id: project.id } })
-        if (Array.isArray(res.data) && res.data.length > 0) {
-          const formatted = res.data.map(formatTaskObj)
-          setTasks(formatted)
-        }
-      } catch (err) {
-        console.warn("Failed to fetch project tasks from backend:", err)
-      }
-    }
     fetchProjectTasks()
   }, [project?.id])
 
@@ -101,15 +85,52 @@ export function ProjectDetails() {
     setShowEditProjectModal(true)
   }
 
-  const handleCreateTask = (newTask) => {
+  const handleCreateTask = async (newTask) => {
     const formatted = formatTaskObj(newTask)
     setTasks((prev) => [formatted, ...prev])
+    await fetchProjectTasks()
+    if (fetchProjects) fetchProjects()
   }
 
-  const handleUpdateTaskStatus = (taskId, newStatus) => {
+  const handleUpdateTaskStatus = async (taskId, newStatus) => {
     setTasks((prev) =>
       prev.map((t) => (t.id === taskId ? { ...t, status: newStatus } : t))
     )
+
+    try {
+      const targetStr = (newStatus || "").toLowerCase().trim()
+      const isDone = targetStr === "done" || targetStr === "completed"
+      const updatePayload = {
+        completed_at: isDone ? new Date().toISOString() : null,
+      }
+      const lovRes = await api.get("/projects/lov").catch(() => null)
+      if (lovRes?.data?.statuses) {
+        const match = lovRes.data.statuses.find((s) => {
+          const sName = (s.name || "").toLowerCase().trim()
+          if (targetStr === "done" || targetStr === "completed") {
+            return sName === "completed" || sName === "done"
+          }
+          if (targetStr === "to do" || targetStr === "todo") {
+            return sName === "todo" || sName === "to do"
+          }
+          if (targetStr === "in progress") {
+            return sName === "in progress"
+          }
+          return sName === targetStr
+        })
+        if (match) {
+          updatePayload.status_id = match.id
+        }
+      }
+      await api.post(`/tasks/${taskId}`, updatePayload).catch(() => {
+        return api.post(`/api/manage/task/${taskId}`, updatePayload)
+      })
+      await fetchProjectTasks()
+      if (fetchProjects) fetchProjects()
+    } catch (err) {
+      console.warn("Failed to persist task status update:", err)
+      fetchProjectTasks()
+    }
   }
 
   const handleDeleteTask = (taskId) => {

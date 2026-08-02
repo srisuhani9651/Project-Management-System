@@ -5,7 +5,7 @@ import { PieChart, Info } from "lucide-react"
  * ProjectTaskPieChart Component
  * Softened font weights: Poppins for titles & percentage metrics, Roboto for project lists.
  */
-export function ProjectTaskPieChart({ projects = [], tasks = [], title = "Task Distribution by Project" }) {
+export function ProjectTaskPieChart({ distributionData, projects = [], tasks = [], title = "Task Distribution by Project" }) {
   const [hoveredIndex, setHoveredIndex] = useState(null)
 
   const COLORS = [
@@ -17,31 +17,28 @@ export function ProjectTaskPieChart({ projects = [], tasks = [], title = "Task D
     { fill: "#06b6d4", gradientId: "grad-cyan", start: "#06b6d4", end: "#0e7490", badge: "bg-cyan-500" },
   ]
 
-  const projectDataMap = {}
-  
-  if (tasks.length > 0) {
+  let rawEntries = []
+
+  if (distributionData?.items) {
+    rawEntries = distributionData.items
+  } else if (tasks.length > 0) {
+    const projectDataMap = {}
     tasks.forEach((t) => {
       const projName = t.projectName || t.project_name || "Unassigned"
       projectDataMap[projName] = (projectDataMap[projName] || 0) + 1
     })
+    rawEntries = Object.entries(projectDataMap).map(([name, count]) => ({ name, count }))
   } else if (projects.length > 0) {
+    const projectDataMap = {}
     projects.forEach((p) => {
       const projName = p.name || p.project_name || "Unnamed Project"
       const taskCount = (p.totalTasks !== undefined && p.totalTasks > 0) 
         ? p.totalTasks 
-        : (p.completedTasks || 0) + (p.pendingTasks || 0) || 5
+        : (p.completedTasks || 0) + (p.pendingTasks || 0)
       projectDataMap[projName] = taskCount
     })
-  } else {
-    projectDataMap["Inventory Management"] = 12
-    projectDataMap["Project Management"] = 18
-    projectDataMap["New Web Application"] = 8
+    rawEntries = Object.entries(projectDataMap).map(([name, count]) => ({ name, count }))
   }
-
-  const rawEntries = Object.entries(projectDataMap).map(([name, count]) => ({
-    name,
-    count,
-  }))
 
   const totalTasks = rawEntries.reduce((acc, item) => acc + item.count, 0)
 

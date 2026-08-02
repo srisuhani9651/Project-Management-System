@@ -11,6 +11,10 @@ import { CustomDatePicker } from "@/components/ui/custom-date-picker"
 const helperGetId = (item) => item?.id || item?.status_id || item?.priority_id || item?.task_type_id || ""
 const helperGetName = (item) => item?.name || item?.status_name || item?.priority_name || item?.type_name || ""
 
+const isUUID = (str) =>
+  typeof str === "string" &&
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(str)
+
 /**
  * TaskForm Component
  * Integrated with CustomSelect dropdowns and CustomDatePicker for ultra-modern task editing/creation.
@@ -26,7 +30,7 @@ export function TaskForm({
   const { user } = useProject()
   const defaultDueDate = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split("T")[0]
 
-  const currentUserId = user?.id || ""
+  const currentUserId = user?.id || user?.user_id || ""
   const currentUserName = user?.fullName || user?.full_name || "Current User"
 
   const [lovs, setLovs] = useState({
@@ -37,16 +41,17 @@ export function TaskForm({
     categories: [],
   })
 
+  const [availableProjects, setAvailableProjects] = useState([])
   const [lovsLoading, setLovsLoading] = useState(true)
 
   const [formData, setFormData] = useState({
-    project_id: projectId || initialValues?.project_id || "",
+    project_id: isUUID(projectId) ? projectId : isUUID(initialValues?.project_id) ? initialValues.project_id : "",
     title: initialValues?.title || initialValues?.name || "",
     description: initialValues?.description || "",
     status_id: initialValues?.status_id || "",
     priority_id: initialValues?.priority_id || "",
     task_type_id: initialValues?.task_type_id || "",
-    assignee_id: initialValues?.assignee_id || currentUserId,
+    assignee_id: isUUID(initialValues?.assignee_id) ? initialValues.assignee_id : (isUUID(currentUserId) ? currentUserId : ""),
     due_date: initialValues?.due_date ? initialValues.due_date.split("T")[0] : defaultDueDate,
     completed_at: initialValues?.completed_at ? initialValues.completed_at.split("T")[0] : "",
   })
@@ -54,33 +59,81 @@ export function TaskForm({
   const [errors, setErrors] = useState({})
 
   useEffect(() => {
-    async function fetchLOVs() {
+    async function fetchLOVsAndProjects() {
       setLovsLoading(true)
       try {
-        const res = await api.get("/projects/lov")
-        const data = res.data || {}
-        setLovs({
-          statuses: data.statuses || [],
-          priorities: data.priorities || [],
-          project_types: data.project_types || [],
-          task_types: data.task_types || [],
-          categories: data.categories || [],
-        })
+        const [lovRes, projRes] = await Promise.allSettled([
+          api.get("/projects/lov"),
+          api.get("/projects"),
+        ])
 
-        setFormData((prev) => ({
-          ...prev,
-          status_id: prev.status_id || helperGetId(data.statuses?.[0]) || "",
-          priority_id: prev.priority_id || helperGetId(data.priorities?.[0]) || "",
-          task_type_id: prev.task_type_id || helperGetId(data.task_types?.[0]) || "",
-        }))
+        let dbStatuses = []
+        let dbPriorities = []
+        let dbTaskTypes = []
+        let dbProjects = []
+
+        if (lovRes.status === "fulfilled" && lovRes.value?.data) {
+          const data = lovRes.value.data
+          dbStatuses = data.statuses || []
+          dbPriorities = data.priorities || []
+          dbTaskTypes = data.task_types || []
+          setLovs({
+            statuses: dbStatuses,
+            priorities: dbPriorities,
+            project_types: data.project_types || [],
+            task_types: dbTaskTypes,
+            categories: data.categories || [],
+          })
+        }
+
+        if (projRes.status === "fulfilled" && Array.isArray(projRes.value?.data)) {
+          dbProjects = projRes.value.data.map((p) => ({
+            id: p.project_id,
+            name: p.project_name,
+          }))
+          setAvailableProjects(dbProjects)
+        }
+
+        setFormData((prev) => {
+          let targetProjId = prev.project_id
+          if (!isUUID(targetProjId)) {
+            if (isUUID(projectId)) {
+              targetProjId = projectId
+            } else if (dbProjects.length > 0 && isUUID(dbProjects[0].id)) {
+              targetProjId = dbProjects[0].id
+            } else {
+              targetProjId = ""
+            }
+          }
+
+          let targetAssigneeId = prev.assignee_id
+          if (!isUUID(targetAssigneeId)) {
+            if (isUUID(user?.user_id)) {
+              targetAssigneeId = user.user_id
+            } else if (isUUID(user?.id)) {
+              targetAssigneeId = user.id
+            } else {
+              targetAssigneeId = ""
+            }
+          }
+
+          return {
+            ...prev,
+            project_id: targetProjId,
+            assignee_id: targetAssigneeId,
+            status_id: prev.status_id || helperGetId(dbStatuses[0]) || "",
+            priority_id: prev.priority_id || helperGetId(dbPriorities[0]) || "",
+            task_type_id: prev.task_type_id || helperGetId(dbTaskTypes[0]) || "",
+          }
+        })
       } catch (err) {
-        console.warn("Failed to fetch LOVs for TaskForm:", err)
+        console.warn("Failed to fetch LOVs/Projects for TaskForm:", err)
       } finally {
         setLovsLoading(false)
       }
     }
-    fetchLOVs()
-  }, [])
+    fetchLOVsAndProjects()
+  }, [projectId, user])
 
   const handleChange = (e) => {
     const { name, value } = e.target
@@ -100,11 +153,16 @@ export function TaskForm({
   const validate = () => {
     const newErrors = {}
 
+    if (!formData.project_id || !isUUID(formData.project_id)) {
+      newErrors.project_id = "A valid project from database is required. Please create a project first."
+    }
     if (!formData.title.trim()) newErrors.title = "Task Title is required."
     if (!formData.status_id) newErrors.status_id = "Status selection is required."
     if (!formData.priority_id) newErrors.priority_id = "Priority selection is required."
     if (!formData.task_type_id) newErrors.task_type_id = "Task Type is required."
-    if (!formData.assignee_id) newErrors.assignee_id = "Assignee is required."
+    if (!formData.assignee_id || !isUUID(formData.assignee_id)) {
+      newErrors.assignee_id = "A valid assignee is required."
+    }
     if (!formData.due_date) newErrors.due_date = "Due Date is required."
 
     setErrors(newErrors)
@@ -116,7 +174,7 @@ export function TaskForm({
     if (!validate()) return
 
     const payload = {
-      project_id: formData.project_id || projectId,
+      project_id: formData.project_id,
       title: formData.title.trim(),
       description: formData.description.trim() || null,
       status_id: formData.status_id,
@@ -142,13 +200,6 @@ export function TaskForm({
 
       {/* SECTION 1: BASIC INFORMATION */}
       <div className="space-y-3">
-        <div className="flex items-center gap-2 pb-2 border-b border-border/50">
-          <div className="h-6 w-6 rounded-lg bg-blue-500/10 text-blue-600 flex items-center justify-center shrink-0">
-            <Info className="h-3.5 w-3.5 stroke-[2.2]" />
-          </div>
-          <span className="font-poppins text-xs font-semibold text-foreground">Task Details</span>
-        </div>
-
         {/* Task Title */}
         <div className="space-y-1">
           <div className="flex items-center justify-between">
@@ -165,7 +216,7 @@ export function TaskForm({
             disabled={isLoading}
             value={formData.title}
             onChange={handleChange}
-            className={`h-9 text-xs rounded-xl bg-muted/20 border-border/70 focus-visible:ring-2 focus-visible:ring-blue-500/20 ${
+            className={`h-9.5 text-xs rounded-xl bg-muted/20 border-border/70 focus-visible:ring-2 focus-visible:ring-blue-500/20 ${
               errors.title ? "border-rose-500 bg-rose-500/5" : ""
             }`}
           />
@@ -196,15 +247,32 @@ export function TaskForm({
 
       {/* SECTION 2: CLASSIFICATION & ASSIGNEE */}
       <div className="space-y-3 pt-1">
-        <div className="flex items-center gap-2 pb-2 border-b border-border/50">
-          <div className="h-6 w-6 rounded-lg bg-indigo-500/10 text-indigo-600 flex items-center justify-center shrink-0">
-            <Layers className="h-3.5 w-3.5 stroke-[2.2]" />
-          </div>
-          <span className="font-poppins text-xs font-semibold text-foreground">Classification & Assignee</span>
-          {lovsLoading && <Loader2 className="h-3.5 w-3.5 animate-spin text-blue-600 ml-auto" />}
+        <div className="flex items-center justify-between pb-1.5 border-b border-border/40">
+          <span className="font-poppins text-xs font-semibold text-foreground tracking-wide text-muted-foreground uppercase">
+            Task Configuration
+          </span>
+          {lovsLoading && <Loader2 className="h-3.5 w-3.5 animate-spin text-blue-600" />}
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+          {/* Target Project Dropdown */}
+          {availableProjects.length > 0 && (
+            <div className="space-y-1 sm:col-span-2">
+              <Label className="text-xs font-semibold text-foreground">
+                Target Project <span className="text-blue-600 font-bold">*</span>
+              </Label>
+              <CustomSelect
+                options={availableProjects}
+                value={formData.project_id}
+                onChange={(e) => handleCustomSelectChange("project_id", e.target.value)}
+                placeholder="Select Target Project"
+                disabled={isLoading || lovsLoading}
+                error={!!errors.project_id}
+              />
+              {errors.project_id && <p className="text-[11px] text-rose-500 font-medium">{errors.project_id}</p>}
+            </div>
+          )}
+
           {/* Status */}
           <div className="space-y-1">
             <Label className="text-xs font-semibold text-foreground">
@@ -259,7 +327,7 @@ export function TaskForm({
               Assignee <span className="text-blue-600 font-bold">*</span>
             </Label>
             <div
-              className={`flex h-10 w-full items-center gap-2.5 rounded-xl border bg-muted/20 px-3 text-xs font-medium text-foreground ${
+              className={`flex h-9.5 w-full items-center gap-2.5 rounded-xl border bg-muted/20 px-3 text-xs font-medium text-foreground ${
                 errors.assignee_id ? "border-rose-500" : "border-border/70"
               }`}
             >
@@ -275,14 +343,13 @@ export function TaskForm({
 
       {/* SECTION 3: TIMELINE & DUE DATE */}
       <div className="space-y-3 pt-1">
-        <div className="flex items-center gap-2 pb-2 border-b border-border/50">
-          <div className="h-6 w-6 rounded-lg bg-purple-500/10 text-purple-600 flex items-center justify-center shrink-0">
-            <Calendar className="h-3.5 w-3.5 stroke-[2.2]" />
-          </div>
-          <span className="font-poppins text-xs font-semibold text-foreground">Timeline & Schedule</span>
+        <div className="flex items-center justify-between pb-1.5 border-b border-border/40">
+          <span className="font-poppins text-xs font-semibold text-foreground tracking-wide text-muted-foreground uppercase">
+            Schedule & Dates
+          </span>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
           {/* Due Date */}
           <div className="space-y-1">
             <Label className="text-xs font-semibold text-foreground">
@@ -314,7 +381,7 @@ export function TaskForm({
       </div>
 
       {/* Form Submission Footer */}
-      <div className="pt-3 border-t border-border/60 flex items-center justify-end gap-2.5">
+      <div className="pt-4 border-t border-border/60 flex items-center justify-end gap-2.5 mt-2">
         {onCancel && (
           <Button
             type="button"
@@ -330,7 +397,7 @@ export function TaskForm({
         <Button
           type="submit"
           disabled={isLoading || lovsLoading}
-          className="h-9 px-6 font-poppins text-xs font-semibold rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-xs cursor-pointer"
+          className="h-9.5 px-6 font-poppins text-xs font-semibold rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-xs cursor-pointer"
         >
           {isLoading ? (
             <>

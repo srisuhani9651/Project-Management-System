@@ -14,25 +14,27 @@ import { CustomSelect } from "@/components/ui/custom-select"
 export function ProjectOverview({ tasks = [] }) {
   const [chartView, setChartView] = useState("status") // "status" | "priority"
 
-  const total = tasks.length || 1
+  const total = tasks.length
 
   // Status Metrics
   const completedCount = tasks.filter(
     (t) => (t.status || "").toLowerCase() === "done" || (t.status || "").toLowerCase() === "completed"
-  ).length || 1
+  ).length
 
   const inProgressCount = tasks.filter(
-    (t) => (t.status || "").toLowerCase() === "in progress"
-  ).length || 1
+    (t) => (t.status || "").toLowerCase() === "in progress" || (t.status || "").toLowerCase().includes("progress")
+  ).length
 
-  const todoCount = Math.max(0, total - completedCount - inProgressCount)
+  const todoCount = tasks.filter(
+    (t) => (t.status || "").toLowerCase() === "to do" || (t.status || "").toLowerCase() === "todo"
+  ).length
 
-  const completionPercentage = total > 0 ? Math.round((completedCount / total) * 100) : 50
+  const completionPercentage = total > 0 ? Math.round((completedCount / total) * 100) : 0
 
   // Priority Metrics
-  const highCount = tasks.filter((t) => (t.priority || "").toLowerCase() === "high").length || 1
-  const mediumCount = tasks.filter((t) => (t.priority || "").toLowerCase() === "medium").length || 1
-  const lowCount = tasks.filter((t) => (t.priority || "").toLowerCase() === "low").length || 0
+  const highCount = tasks.filter((t) => (t.priority || "").toLowerCase() === "high" || (t.priority || "").toLowerCase() === "urgent").length
+  const mediumCount = tasks.filter((t) => (t.priority || "").toLowerCase() === "medium").length
+  const lowCount = tasks.filter((t) => (t.priority || "").toLowerCase() === "low").length
 
   // View mode options
   const viewModeOptions = [
@@ -45,13 +47,14 @@ export function ProjectOverview({ tasks = [] }) {
   const circumference = 2 * Math.PI * radius
 
   // Slice calculations for Status view
-  const statusCompletedDash = (completedCount / total) * circumference
-  const statusInProgressDash = (inProgressCount / total) * circumference
+  const safeTotal = total > 0 ? total : 1
+  const statusCompletedDash = (completedCount / safeTotal) * circumference
+  const statusInProgressDash = (inProgressCount / safeTotal) * circumference
   const statusTodoDash = circumference - statusCompletedDash - statusInProgressDash
 
   // Slice calculations for Priority view
-  const priorityHighDash = (highCount / total) * circumference
-  const priorityMediumDash = (mediumCount / total) * circumference
+  const priorityHighDash = (highCount / safeTotal) * circumference
+  const priorityMediumDash = (mediumCount / safeTotal) * circumference
 
   return (
     <div className="space-y-6 pt-2 animate-fade-in font-roboto">

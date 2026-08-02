@@ -13,54 +13,11 @@ import {
  * PendingTasksList Component
  * Refined font weights: Poppins for titles, Roboto for item content.
  */
-export function PendingTasksList({ tasks = [], onToggleTaskStatus, title = "Pending Tasks" }) {
+export function PendingTasksList({ pendingData, tasks = [], onToggleTaskStatus, title = "Pending Tasks" }) {
   const navigate = useNavigate()
   const [filter, setFilter] = useState("all")
 
-  const defaultTasks = [
-    {
-      id: "task-101",
-      title: "Design dynamic analytics wireframes & color system",
-      projectName: "Project management",
-      projectKey: "PRO",
-      status: "In Progress",
-      priority: "High",
-      dueDate: "Today, 5:00 PM",
-      urgent: true,
-    },
-    {
-      id: "task-102",
-      title: "Integrate JWT token authentication & policy check logic",
-      projectName: "Inventory Management",
-      projectKey: "INV",
-      status: "To Do",
-      priority: "Medium",
-      dueDate: "Tomorrow",
-      urgent: false,
-    },
-    {
-      id: "task-103",
-      title: "Optimize SVG pie chart responsiveness & legend tooltips",
-      projectName: "New Web Application",
-      projectKey: "NEW",
-      status: "In Progress",
-      priority: "Low",
-      dueDate: "Aug 5, 2026",
-      urgent: false,
-    },
-    {
-      id: "task-104",
-      title: "Set up monthly productivity calculations API schema",
-      projectName: "Project management",
-      projectKey: "PRO",
-      status: "To Do",
-      priority: "High",
-      dueDate: "Aug 6, 2026",
-      urgent: true,
-    },
-  ]
-
-  const displayTasks = tasks.length > 0 ? tasks : defaultTasks
+  const displayTasks = pendingData?.tasks || tasks
 
   const pendingTasks = displayTasks.filter((t) => {
     const status = (t.status || "").toLowerCase()

@@ -59,7 +59,7 @@ export function Login() {
     setIsLoading(true)
 
     try {
-      const response = await api.post("/login", {
+      const response = await api.post("/auth/login", {
         email: formData.email.trim(),
         password: formData.password,
       })

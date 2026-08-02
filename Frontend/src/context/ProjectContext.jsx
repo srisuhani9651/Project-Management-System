@@ -26,26 +26,21 @@ export function ProjectProvider({ children }) {
     localStorage.setItem("pf_projects", JSON.stringify(projects))
   }, [projects])
 
-  /**
-   * Centralized Policy-Based Access Control (PBAC) authorization function.
-   * Prepared for future backend integration: authorize(user, action, resource, resourceData).
-   * Note: No RBAC roles (Admin/User). Policy checks will evaluate user attributes & resource permissions.
-   */
   const authorize = (currentUser, action, resource, resourceData) => {
-    // In mock phase, default to allowed for authenticated user
     if (!currentUser) return false
     return true
   }
 
   const loginUser = (userData) => {
-    const token = userData.token || userData.access_token
+    const token = userData.token || userData.access_token || localStorage.getItem("pf_token")
     if (token) {
       localStorage.setItem("pf_token", token)
     }
     const fullUserData = {
-      id: userData.id || userData.user_id || `usr-${Date.now()}`,
-      fullName: userData.fullName || userData.full_name,
-      email: userData.email,
+      id: userData.id || userData.user_id || user?.id || `usr-${Date.now()}`,
+      fullName: userData.fullName || userData.full_name || user?.fullName,
+      email: userData.email || user?.email,
+      username: userData.username !== undefined ? userData.username : user?.username,
       token: token,
     }
     setUser(fullUserData)
@@ -53,7 +48,7 @@ export function ProjectProvider({ children }) {
 
   const logoutUser = async () => {
     try {
-      await api.post("/logout")
+      await api.post("/auth/logout")
     } catch (err) {
       console.warn("Logout API call warning:", err?.response?.data?.detail || err.message)
     } finally {
@@ -78,9 +73,10 @@ export function ProjectProvider({ children }) {
         plannedStartDate: p.planned_start_date,
         plannedEndDate: p.planned_end_date,
         estimatedDuration: p.estimated_duration,
-        totalTasks: 0,
-        completedTasks: 0,
-        pendingTasks: 0,
+        totalTasks: p.total_tasks !== undefined ? p.total_tasks : 0,
+        completedTasks: p.completed_tasks !== undefined ? p.completed_tasks : 0,
+        pendingTasks: p.pending_tasks !== undefined ? p.pending_tasks : 0,
+        progress: p.progress !== undefined ? p.progress : 0,
         createdAt: p.created_at
           ? new Date(p.created_at).toLocaleDateString("en-US", {
               month: "short",
@@ -116,6 +112,7 @@ export function ProjectProvider({ children }) {
       totalTasks: 0,
       completedTasks: 0,
       pendingTasks: 0,
+      progress: 0,
       createdAt: new Date().toLocaleDateString("en-US", {
         month: "short",
         day: "numeric",
@@ -138,6 +135,7 @@ export function ProjectProvider({ children }) {
         logoutUser,
         projects,
         setProjects,
+        fetchProjects,
         addProject,
         clearProjects,
         authorize,

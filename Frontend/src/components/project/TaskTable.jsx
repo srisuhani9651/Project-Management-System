@@ -145,7 +145,7 @@ export function TaskTable({ tasks = [], onDeleteTask, onUpdateTaskStatus, onCrea
                   <TableCell>
                     <select
                       value={
-                        (task.status || "").toLowerCase().includes("done")
+                        (task.status || "").toLowerCase().includes("done") || (task.status || "").toLowerCase().includes("completed")
                           ? "Done"
                           : (task.status || "").toLowerCase().includes("progress")
                           ? "In Progress"
