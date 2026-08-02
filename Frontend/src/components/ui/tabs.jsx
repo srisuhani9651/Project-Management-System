@@ -60,7 +60,7 @@ const TabsTrigger = React.forwardRef(({ className, value, current, onTabChange, 
 })
 TabsTrigger.displayName = "TabsTrigger"
 
-const TabsContent = React.forwardRef(({ className, value, current, children, ...props }, ref) => {
+const TabsContent = React.forwardRef(({ className, value, current, onTabChange, children, ...props }, ref) => {
   if (current !== value) return null
   return (
     <div
