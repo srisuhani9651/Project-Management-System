@@ -1,7 +1,8 @@
-import React, { useState } from "react"
+import React, { useState, useEffect } from "react"
 import { useParams, useNavigate } from "react-router-dom"
 import { LayoutDashboard, Kanban, ListTodo } from "lucide-react"
 import { useProject } from "@/context/ProjectContext"
+import api from "@/services/api"
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
 import { ProjectHeader } from "@/components/project/ProjectHeader"
 import { ProjectOverview } from "@/components/project/ProjectOverview"
@@ -29,7 +30,22 @@ export function ProjectDetails() {
       status: "Active",
     }
 
-  // Local state for tasks
+  const formatTaskObj = (t) => ({
+    id: t.task_id || t.id,
+    task_id: t.task_id || t.id,
+    name: t.title || t.name,
+    title: t.title || t.name,
+    description: t.description || "",
+    priority: t.priority_name || t.priority || "Medium",
+    status: t.status_name || t.status || "To Do",
+    dueDate: t.due_date
+      ? new Date(t.due_date).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
+      : t.dueDate || "No due date",
+    assignee: t.assignee_name || t.assignee || "Unassigned",
+    projectKey: project.key,
+  })
+
+  // State for tasks
   const [tasks, setTasks] = useState([
     {
       id: "t-101",
@@ -51,27 +67,24 @@ export function ProjectDetails() {
       assignee: "John Doe",
       projectKey: project.key,
     },
-    {
-      id: "t-103",
-      name: "Database Schema Migration & Indexes",
-      description: "PostgreSQL migration scripts for users, projects, and tasks.",
-      priority: "High",
-      status: "To Do",
-      dueDate: "Aug 10, 2026",
-      assignee: "Alice Smith",
-      projectKey: project.key,
-    },
-    {
-      id: "t-104",
-      name: "Mobile Responsive Layout Polish",
-      description: "Refine responsive grid layout and mobile touch interactions.",
-      priority: "Low",
-      status: "In Progress",
-      dueDate: "Aug 8, 2026",
-      assignee: "Suhani Srivastava",
-      projectKey: project.key,
-    },
   ])
+
+  // Fetch tasks from Backend API when project ID changes
+  useEffect(() => {
+    async function fetchProjectTasks() {
+      if (!project?.id || project.id.startsWith("proj-")) return
+      try {
+        const res = await api.get("/tasks", { params: { project_id: project.id } })
+        if (Array.isArray(res.data)) {
+          const formatted = res.data.map(formatTaskObj)
+          setTasks(formatted)
+        }
+      } catch (err) {
+        console.warn("Failed to fetch project tasks from backend:", err)
+      }
+    }
+    fetchProjectTasks()
+  }, [project?.id])
 
   const [showCreateTaskModal, setShowCreateTaskModal] = useState(false)
 
@@ -90,7 +103,8 @@ export function ProjectDetails() {
 
   // Handle Task Creation
   const handleCreateTask = (newTask) => {
-    setTasks((prev) => [newTask, ...prev])
+    const formatted = formatTaskObj(newTask)
+    setTasks((prev) => [formatted, ...prev])
   }
 
   // Handle Task Status Update
@@ -159,6 +173,7 @@ export function ProjectDetails() {
         open={showCreateTaskModal}
         onOpenChange={setShowCreateTaskModal}
         onCreateTask={handleCreateTask}
+        projectId={project.id}
         projectKey={project.key}
       />
     </div>
