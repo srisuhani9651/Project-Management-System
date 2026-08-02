@@ -6,16 +6,15 @@ from pydantic import BaseModel, Field
 
 class TaskCreate(BaseModel):
     """Schema for creating a task."""
-    project_id: UUID = Field(..., description="ID of the project this task belongs to")
-    title: str = Field(..., min_length=1, max_length=255, description="Title of the task")
-    description: Optional[str] = Field(None, max_length=255, description="Description of the task")
-    status_id: Optional[UUID] = None
-    priority_id: Optional[UUID] = None
-    task_type_id: Optional[UUID] = None
-    assignee_id: Optional[UUID] = None
-    due_date: Optional[datetime] = None
-    estimated_time_of_completion: Optional[datetime] = None
-    completed_at: Optional[datetime] = None
+    project_id: UUID = Field(..., description="ID of the project this task belongs to (Mandatory)")
+    title: str = Field(..., min_length=1, max_length=255, description="Title of the task (Mandatory)")
+    status_id: UUID = Field(..., description="Status ID (Mandatory)")
+    priority_id: UUID = Field(..., description="Priority ID (Mandatory)")
+    task_type_id: UUID = Field(..., description="Task Type ID (Mandatory)")
+    assignee_id: UUID = Field(..., description="Assignee User ID (Mandatory)")
+    due_date: datetime = Field(..., description="Due date (Mandatory)")
+    description: Optional[str] = Field(None, max_length=255, description="Description of the task (Optional)")
+    completed_at: Optional[datetime] = Field(None, description="Completion date (Optional)")
 
 
 class TaskUpdate(BaseModel):
@@ -28,7 +27,6 @@ class TaskUpdate(BaseModel):
     task_type_id: Optional[UUID] = None
     assignee_id: Optional[UUID] = None
     due_date: Optional[datetime] = None
-    estimated_time_of_completion: Optional[datetime] = None
     completed_at: Optional[datetime] = None
     is_active: Optional[bool] = None
 
@@ -49,7 +47,6 @@ class TaskResponse(BaseModel):
     assignee_name: Optional[str] = None
     created_by: Optional[UUID] = None
     due_date: Optional[datetime] = None
-    estimated_time_of_completion: Optional[datetime] = None
     completed_at: Optional[datetime] = None
     is_active: bool
     created_at: Optional[datetime] = None

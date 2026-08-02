@@ -48,7 +48,6 @@ class TaskService:
             assignee_id=task_data.assignee_id,
             created_by=current_user_id,
             due_date=task_data.due_date,
-            estimated_time_of_completion=task_data.estimated_time_of_completion,
             completed_at=task_data.completed_at,
             is_active=True
         )
@@ -166,7 +165,6 @@ class TaskService:
             assignee_name=assignee_name,
             created_by=task.created_by,  # type: ignore
             due_date=task.due_date,  # type: ignore
-            estimated_time_of_completion=task.estimated_time_of_completion,  # type: ignore
             completed_at=task.completed_at,  # type: ignore
             is_active=task.is_active,  # type: ignore
             created_at=task.created_at,  # type: ignore

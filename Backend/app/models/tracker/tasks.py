@@ -28,15 +28,14 @@ class Task(Base):
     description = Column(String(255), nullable=True)
 
     # Foreign Keys to LOV and Auth tables
-    status_id = Column(UUID(as_uuid=True), ForeignKey("lov.master_status.status_id"), nullable=True)
-    priority_id = Column(UUID(as_uuid=True), ForeignKey("lov.master_priority.priority_id"), nullable=True)
-    task_type_id = Column(UUID(as_uuid=True), ForeignKey("lov.master_task_type.task_type_id"), nullable=True)
-    assignee_id = Column(UUID(as_uuid=True), ForeignKey("auth.user_master.user_id"), nullable=True)
-    created_by = Column(UUID(as_uuid=True), ForeignKey("auth.user_master.user_id"), nullable=True)
+    status_id = Column(UUID(as_uuid=True), ForeignKey("lov.master_status.status_id"), nullable=False)
+    priority_id = Column(UUID(as_uuid=True), ForeignKey("lov.master_priority.priority_id"), nullable=False)
+    task_type_id = Column(UUID(as_uuid=True), ForeignKey("lov.master_task_type.task_type_id"), nullable=False)
+    assignee_id = Column(UUID(as_uuid=True), ForeignKey("auth.user_master.user_id"), nullable=False)
+    created_by = Column(UUID(as_uuid=True), ForeignKey("auth.user_master.user_id"), nullable=False)
 
     # Task Dates & Timeline
-    due_date = Column(DateTime(timezone=True), nullable=True)
-    estimated_time_of_completion = Column(DateTime(timezone=True), nullable=True)
+    due_date = Column(DateTime(timezone=True), nullable=False)
     completed_at = Column(DateTime(timezone=True), nullable=True)
 
     # Status and Timestamps
@@ -54,4 +53,4 @@ event.listen(
     Task.__table__,
     "before_create",
     DDL("CREATE SCHEMA IF NOT EXISTS tracker;"),
-)
+)

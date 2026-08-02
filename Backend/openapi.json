@@ -1344,14 +1344,44 @@
             "type": "string",
             "format": "uuid",
             "title": "Project Id",
-            "description": "ID of the project this task belongs to"
+            "description": "ID of the project this task belongs to (Mandatory)"
           },
           "title": {
             "type": "string",
             "maxLength": 255,
             "minLength": 1,
             "title": "Title",
-            "description": "Title of the task"
+            "description": "Title of the task (Mandatory)"
+          },
+          "status_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Status Id",
+            "description": "Status ID (Mandatory)"
+          },
+          "priority_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Priority Id",
+            "description": "Priority ID (Mandatory)"
+          },
+          "task_type_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Task Type Id",
+            "description": "Task Type ID (Mandatory)"
+          },
+          "assignee_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Assignee Id",
+            "description": "Assignee User ID (Mandatory)"
+          },
+          "due_date": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Due Date",
+            "description": "Due date (Mandatory)"
           },
           "description": {
             "anyOf": [
@@ -1364,79 +1394,7 @@
               }
             ],
             "title": "Description",
-            "description": "Description of the task"
-          },
-          "status_id": {
-            "anyOf": [
-              {
-                "type": "string",
-                "format": "uuid"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Status Id"
-          },
-          "priority_id": {
-            "anyOf": [
-              {
-                "type": "string",
-                "format": "uuid"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Priority Id"
-          },
-          "task_type_id": {
-            "anyOf": [
-              {
-                "type": "string",
-                "format": "uuid"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Task Type Id"
-          },
-          "assignee_id": {
-            "anyOf": [
-              {
-                "type": "string",
-                "format": "uuid"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Assignee Id"
-          },
-          "due_date": {
-            "anyOf": [
-              {
-                "type": "string",
-                "format": "date-time"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Due Date"
-          },
-          "estimated_time_of_completion": {
-            "anyOf": [
-              {
-                "type": "string",
-                "format": "date-time"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Estimated Time Of Completion"
+            "description": "Description of the task (Optional)"
           },
           "completed_at": {
             "anyOf": [
@@ -1448,13 +1406,19 @@
                 "type": "null"
               }
             ],
-            "title": "Completed At"
+            "title": "Completed At",
+            "description": "Completion date (Optional)"
           }
         },
         "type": "object",
         "required": [
           "project_id",
-          "title"
+          "title",
+          "status_id",
+          "priority_id",
+          "task_type_id",
+          "assignee_id",
+          "due_date"
         ],
         "title": "TaskCreate",
         "description": "Schema for creating a task."
@@ -1601,18 +1565,6 @@
               }
             ],
             "title": "Due Date"
-          },
-          "estimated_time_of_completion": {
-            "anyOf": [
-              {
-                "type": "string",
-                "format": "date-time"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Estimated Time Of Completion"
           },
           "completed_at": {
             "anyOf": [
@@ -1762,18 +1714,6 @@
               }
             ],
             "title": "Due Date"
-          },
-          "estimated_time_of_completion": {
-            "anyOf": [
-              {
-                "type": "string",
-                "format": "date-time"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Estimated Time Of Completion"
           },
           "completed_at": {
             "anyOf": [
