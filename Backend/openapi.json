@@ -1015,30 +1015,92 @@
         "tags": [
           "Project Members"
         ],
-        "summary": "Get all users for dropdown",
-        "description": "Returns all users as value/label items for a multi-select dropdown.",
+        "summary": "Get users for dropdown",
+        "description": "Returns users as value/label items for dropdowns with backend query filtering.",
         "operationId": "get_users_dropdown_api_members_users_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Optional project ID filter",
+              "title": "Project Id"
+            },
+            "description": "Optional project ID filter"
+          },
+          {
+            "name": "exclude_project_members",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "description": "If True, excludes existing active project members & owner",
+              "default": false,
+              "title": "Exclude Project Members"
+            },
+            "description": "If True, excludes existing active project members & owner"
+          },
+          {
+            "name": "exclude_user_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Optional user ID to exclude",
+              "title": "Exclude User Id"
+            },
+            "description": "Optional user ID to exclude"
+          }
+        ],
         "responses": {
           "200": {
             "description": "Successful Response",
             "content": {
               "application/json": {
                 "schema": {
+                  "type": "array",
                   "items": {
                     "$ref": "#/components/schemas/UserDropdownItem"
                   },
-                  "type": "array",
                   "title": "Response Get Users Dropdown Api Members Users Get"
                 }
               }
             }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
           }
-        },
-        "security": [
-          {
-            "HTTPBearer": []
-          }
-        ]
+        }
       }
     },
     "/api/members/{project_id}": {
@@ -1047,7 +1109,7 @@
           "Project Members"
         ],
         "summary": "Get project members",
-        "description": "Returns all active members for a project (Enforces PBAC Project Visibility).",
+        "description": "Returns active members for a project (Enforces PBAC Project Visibility).",
         "operationId": "get_project_members_api_members__project_id__get",
         "security": [
           {
@@ -1064,6 +1126,25 @@
               "format": "uuid",
               "title": "Project Id"
             }
+          },
+          {
+            "name": "exclude_user_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Optional user ID to exclude",
+              "title": "Exclude User Id"
+            },
+            "description": "Optional user ID to exclude"
           }
         ],
         "responses": {
@@ -2056,6 +2137,18 @@
               }
             ],
             "title": "Project Name"
+          },
+          "project_owner_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Project Owner Id"
           },
           "title": {
             "type": "string",

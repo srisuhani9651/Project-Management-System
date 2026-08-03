@@ -36,6 +36,7 @@ class TaskResponse(BaseModel):
     task_id: UUID
     project_id: UUID
     project_name: Optional[str] = None
+    project_owner_id: Optional[UUID] = None
     title: str
     description: Optional[str] = None
     status_id: Optional[UUID] = None

@@ -1,7 +1,7 @@
-from typing import List
+from typing import List, Optional
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, Query, status
 from sqlalchemy.orm import Session
 
 from app.authorization.pbac import Action, authorize
@@ -19,24 +19,37 @@ from app.services.schemas.member import (
 router = APIRouter(prefix="/api/members", tags=["Project Members"])
 
 
-@router.get("/users", response_model=List[UserDropdownItem], summary="Get all users for dropdown")
+@router.get("/users", response_model=List[UserDropdownItem], summary="Get users for dropdown")
 def get_users_dropdown(
+    project_id: Optional[UUID] = Query(None, description="Optional project ID filter"),
+    exclude_project_members: bool = Query(False, description="If True, excludes existing active project members & owner"),
+    exclude_user_id: Optional[UUID] = Query(None, description="Optional user ID to exclude"),
     db: Session = Depends(get_db),
     current_user: UserMaster = Depends(get_current_user)
 ):
-    """Returns all users as value/label items for a multi-select dropdown."""
-    return MemberService.get_users_dropdown(db)
+    """Returns users as value/label items for dropdowns with backend query filtering."""
+    return MemberService.get_users_dropdown(
+        db=db,
+        project_id=project_id,
+        exclude_project_members=exclude_project_members,
+        exclude_user_id=exclude_user_id
+    )
 
 
 @router.get("/{project_id}", response_model=List[ProjectMemberResponse], summary="Get project members")
 def get_project_members(
     project_id: UUID,
+    exclude_user_id: Optional[UUID] = Query(None, description="Optional user ID to exclude"),
     db: Session = Depends(get_db),
     current_user: UserMaster = Depends(get_current_user)
 ):
-    """Returns all active members for a project (Enforces PBAC Project Visibility)."""
+    """Returns active members for a project (Enforces PBAC Project Visibility)."""
     authorize(current_user, Action.PROJECT_VIEW, project_id, db)
-    return MemberService.get_project_members(db, project_id)
+    return MemberService.get_project_members(
+        db=db,
+        project_id=project_id,
+        exclude_user_id=exclude_user_id
+    )
 
 
 @router.post("", response_model=AddMembersResponse, status_code=status.HTTP_201_CREATED, summary="Add members to a project")

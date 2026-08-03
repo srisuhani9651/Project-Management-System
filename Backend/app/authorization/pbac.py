@@ -153,18 +153,11 @@ def eval_project_delete(user: UserMaster, project: Project, db: Session) -> bool
 def eval_task_view(user: UserMaster, task: Task, db: Session) -> bool:
     """
     Policy: Task View PBAC:
-    - Project Owner: Can view all tasks in their projects.
-    - Non-owner Project Member: Can view tasks assigned to or created by them.
+    - Any active project member (including owner, creator, or assignee) can view tasks in that project.
     """
-    project = get_project(task.project_id, db)
-    is_owner = str(project.created_by) == str(user.user_id)
-    is_assignee = task.assignee_id and str(task.assignee_id) == str(user.user_id)
-    is_creator = task.created_by and str(task.created_by) == str(user.user_id)
-
-    if is_owner or is_assignee or is_creator:
-        return True
-
-    raise PBACAuthorizationError("Access denied: You can only view tasks assigned to you or created by you in this project.")
+    if not is_project_member(user.user_id, task.project_id, db):
+        raise PBACAuthorizationError("Access denied: Only project members can view tasks in this project.")
+    return True
 
 
 def eval_task_create(user: UserMaster, project_id: UUID, db: Session) -> bool:
@@ -175,24 +168,34 @@ def eval_task_create(user: UserMaster, project_id: UUID, db: Session) -> bool:
 
 
 def eval_task_update(user: UserMaster, task: Task, db: Session) -> bool:
-    """Policy: Task update is allowed only if the user created the task or is the assignee."""
-    is_creator = str(task.created_by) == str(user.user_id)
+    """
+    Policy: Task Update PBAC:
+    - Project Owner: Can update (edit, status change, reassign) any task in the project.
+    - Project Member: Can update ONLY tasks assigned to them.
+    """
+    project = get_project(task.project_id, db)
+    is_owner = str(project.created_by) == str(user.user_id)
     is_assignee = task.assignee_id and str(task.assignee_id) == str(user.user_id)
 
-    if not (is_creator or is_assignee):
-        raise PBACAuthorizationError("Access denied: Only the task creator or assignee can update this task.")
-    return True
+    if is_owner or is_assignee:
+        return True
+
+    raise PBACAuthorizationError("Access denied: You can only edit or update tasks assigned to you.")
 
 
 def eval_task_delete(user: UserMaster, task: Task, db: Session) -> bool:
-    """Policy: Task delete is allowed only if the task status is Todo and the requester is the project owner."""
+    """
+    Policy: Task Delete PBAC:
+    - Allowed if task status is Todo AND requester is Project Owner or Task Assignee.
+    """
     project = get_project(task.project_id, db)
+    is_owner = str(project.created_by) == str(user.user_id)
+    is_assignee = task.assignee_id and str(task.assignee_id) == str(user.user_id)
 
-    # Check 1: Requester must be project owner
-    if str(project.created_by) != str(user.user_id):
-        raise PBACAuthorizationError("Access denied: Only the project owner can delete tasks from this project.")
+    if not (is_owner or is_assignee):
+        raise PBACAuthorizationError("Access denied: Only the project owner or task assignee can delete this task.")
 
-    # Check 2: Task status must be 'Todo' / 'To Do'
+    # Task status must be 'Todo' / 'To Do'
     status_obj = db.query(Status).filter(Status.status_id == task.status_id).first()
     status_name = status_obj.status_name.lower().strip() if status_obj else ""
 

@@ -185,32 +185,25 @@ class TaskService:
 
         if project_id:
             query = query.filter(Task.project_id == project_id)  # type: ignore
-
-            if current_user_id:
-                project = db.query(Project).filter(Project.project_id == project_id, Project.is_active == True).first()
-                is_owner = project and str(project.created_by) == str(current_user_id)
-
-                if not is_owner:
-                    # Non-owner members can ONLY view tasks assigned to or created by them
-                    query = query.filter(
-                        or_(
-                            Task.assignee_id == current_user_id,  # type: ignore
-                            Task.created_by == current_user_id  # type: ignore
-                        )
-                    )
         elif current_user_id:
-            # Global task query for user: All tasks in projects they own + tasks assigned to or created by them
-            owned_project_ids = [
+            # Global task query for user: All tasks in projects they own or are member of + tasks assigned to or created by them
+            owned_or_member_proj_ids = {
                 p[0]
                 for p in db.query(Project.project_id).filter(
                     Project.created_by == current_user_id,
                     Project.is_active == True
                 ).all()
-            ]
+            } | {
+                pm[0]
+                for pm in db.query(ProjectMember.project_id).filter(
+                    ProjectMember.user_id == current_user_id,
+                    ProjectMember.is_active == True
+                ).all()
+            }
 
             query = query.filter(
                 or_(
-                    Task.project_id.in_(owned_project_ids),  # type: ignore
+                    Task.project_id.in_(owned_or_member_proj_ids),  # type: ignore
                     Task.assignee_id == current_user_id,  # type: ignore
                     Task.created_by == current_user_id  # type: ignore
                 )
@@ -266,7 +259,7 @@ class TaskService:
         user_ids = ({t.assignee_id for t in tasks if t.assignee_id} | 
                     {t.created_by for t in tasks if t.created_by})
 
-        projects = {p.project_id: p.project_name for p in db.query(Project).filter(Project.project_id.in_(project_ids)).all()} if project_ids else {}
+        projects = {p.project_id: (p.project_name, p.created_by) for p in db.query(Project).filter(Project.project_id.in_(project_ids)).all()} if project_ids else {}
         statuses = {s.status_id: s.status_name for s in db.query(Status).filter(Status.status_id.in_(status_ids)).all()} if status_ids else {}
         priorities = {p.priority_id: p.priority_name for p in db.query(Priority).filter(Priority.priority_id.in_(priority_ids)).all()} if priority_ids else {}
         task_types = {tt.task_type_id: tt.type_name for tt in db.query(TaskType).filter(TaskType.task_type_id.in_(task_type_ids)).all()} if task_type_ids else {}
@@ -274,11 +267,13 @@ class TaskService:
 
         res = []
         for task in tasks:
+            p_info = projects.get(task.project_id)
             res.append(
                 TaskResponse(
                     task_id=task.task_id,  # type: ignore
                     project_id=task.project_id,  # type: ignore
-                    project_name=projects.get(task.project_id),
+                    project_name=p_info[0] if p_info else None,
+                    project_owner_id=p_info[1] if p_info else None,
                     title=task.title,  # type: ignore
                     description=task.description,  # type: ignore
                     status_id=task.status_id,  # type: ignore
