@@ -10,12 +10,9 @@ export function TimebasedAnalytics({ analyticsData, title = "Time-Based Task Ana
 
   const defaultAnalyticsData = {
     "7d": {
-      periodLabel: "Last 7 Days",
-      created: 0,
-      completed: 0,
-      velocityChange: "+0%",
       throughput: "0%",
-      avgDaysToComplete: 0,
+      velocity: "+0%",
+      avgResolution: "0 days",
       bars: [
         { label: "Mon", created: 0, completed: 0 },
         { label: "Tue", created: 0, completed: 0 },
@@ -27,12 +24,9 @@ export function TimebasedAnalytics({ analyticsData, title = "Time-Based Task Ana
       ],
     },
     "30d": {
-      periodLabel: "Last 30 Days",
-      created: 0,
-      completed: 0,
-      velocityChange: "+0%",
       throughput: "0%",
-      avgDaysToComplete: 0,
+      velocity: "+0%",
+      avgResolution: "0 days",
       bars: [
         { label: "W1", created: 0, completed: 0 },
         { label: "W2", created: 0, completed: 0 },
@@ -41,12 +35,9 @@ export function TimebasedAnalytics({ analyticsData, title = "Time-Based Task Ana
       ],
     },
     "90d": {
-      periodLabel: "Last 90 Days",
-      created: 0,
-      completed: 0,
-      velocityChange: "+0%",
       throughput: "0%",
-      avgDaysToComplete: 0,
+      velocity: "+0%",
+      avgResolution: "0 days",
       bars: [
         { label: "M1", created: 0, completed: 0 },
         { label: "M2", created: 0, completed: 0 },
@@ -55,8 +46,11 @@ export function TimebasedAnalytics({ analyticsData, title = "Time-Based Task Ana
     },
   }
 
+  const periodLabels = { "7d": "Last 7 Days", "30d": "Last 30 Days", "90d": "Last 90 Days" }
+
   const activeDataMap = analyticsData || defaultAnalyticsData
   const currentData = activeDataMap[timeframe] || activeDataMap["30d"] || defaultAnalyticsData["30d"]
+  const totalCompleted = (currentData.bars || []).reduce((sum, b) => sum + (b.completed || 0), 0)
   const maxVal = Math.max(...(currentData.bars || []).map((b) => Math.max(b.created || 0, b.completed || 0)), 1)
 
   return (
@@ -101,9 +95,9 @@ export function TimebasedAnalytics({ analyticsData, title = "Time-Based Task Ana
         <div className="space-y-0.5">
           <span className="font-roboto text-[10px] text-muted-foreground uppercase tracking-wider">Completed</span>
           <div className="flex items-baseline gap-1.5">
-            <span className="font-poppins text-base font-semibold text-foreground">{currentData.completed}</span>
+            <span className="font-poppins text-base font-semibold text-foreground">{totalCompleted}</span>
             <span className="font-poppins text-[10px] font-medium text-emerald-600 flex items-center">
-              <ArrowUpRight className="h-3 w-3" /> {currentData.velocityChange}
+              <ArrowUpRight className="h-3 w-3" /> {currentData.velocity}
             </span>
           </div>
         </div>
@@ -118,8 +112,7 @@ export function TimebasedAnalytics({ analyticsData, title = "Time-Based Task Ana
         <div className="space-y-0.5">
           <span className="font-roboto text-[10px] text-muted-foreground uppercase tracking-wider">Avg Resolution</span>
           <div className="flex items-baseline gap-1">
-            <span className="font-poppins text-base font-semibold text-foreground">{currentData.avgDaysToComplete}</span>
-            <span className="text-[10px] text-muted-foreground">days</span>
+            <span className="font-poppins text-base font-semibold text-foreground">{currentData.avgResolution}</span>
           </div>
         </div>
       </div>
@@ -135,7 +128,7 @@ export function TimebasedAnalytics({ analyticsData, title = "Time-Based Task Ana
               <span className="h-2 w-2 rounded-full bg-sky-400/50" /> Created
             </span>
           </span>
-          <span>{currentData.periodLabel}</span>
+          <span>{periodLabels[timeframe]}</span>
         </div>
 
         {/* Grouped Bar Chart */}

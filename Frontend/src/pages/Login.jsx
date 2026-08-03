@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { ForgotPasswordModal } from "@/components/auth/ForgotPasswordModal"
 
 export function Login() {
   const navigate = useNavigate()
@@ -25,6 +26,7 @@ export function Login() {
 
   const [errors, setErrors] = useState({})
   const [isLoading, setIsLoading] = useState(false)
+  const [showForgotPassword, setShowForgotPassword] = useState(false)
 
   const handleChange = (e) => {
     const { name, value } = e.target
@@ -145,9 +147,13 @@ export function Login() {
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
                   <Label htmlFor="password">Password</Label>
-                  <a href="#forgot" onClick={(e) => e.preventDefault()} className="text-xs font-medium text-primary hover:underline">
+                  <button
+                    type="button"
+                    onClick={() => setShowForgotPassword(true)}
+                    className="text-xs font-medium text-primary hover:underline cursor-pointer"
+                  >
                     Forgot password?
-                  </a>
+                  </button>
                 </div>
                 <div className="relative">
                   <Lock className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
@@ -193,6 +199,12 @@ export function Login() {
           </CardContent>
         </Card>
       </div>
+
+      <ForgotPasswordModal
+        open={showForgotPassword}
+        onOpenChange={setShowForgotPassword}
+        initialEmail={formData.email}
+      />
     </div>
   )
 }

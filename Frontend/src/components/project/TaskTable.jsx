@@ -23,7 +23,7 @@ import { useProject } from "@/context/ProjectContext"
  * Fully bound to live API database response with search, status/priority filtering,
  * pagination controls, inline status updates, and PBAC permission controls.
  */
-export function TaskTable({ tasks = [], onDeleteTask, onUpdateTaskStatus, onCreateTask }) {
+export function TaskTable({ tasks = [], onDeleteTask, onUpdateTaskStatus, onCreateTask, onTaskUpdated }) {
   const navigate = useNavigate()
   const { user, authorize } = useProject()
   const [searchQuery, setSearchQuery] = useState("")
@@ -328,10 +328,10 @@ export function TaskTable({ tasks = [], onDeleteTask, onUpdateTaskStatus, onCrea
         open={!!taskToEdit}
         onOpenChange={(open) => !open && setTaskToEdit(null)}
         task={taskToEdit}
-        onSaveTask={async (updated) => {
+        onSaveTask={async () => {
           setTaskToEdit(null)
-          if (onUpdateTaskStatus) {
-            await onUpdateTaskStatus(updated.id || updated.task_id, updated.status || updated.status_name)
+          if (onTaskUpdated) {
+            await onTaskUpdated()
           }
         }}
       />

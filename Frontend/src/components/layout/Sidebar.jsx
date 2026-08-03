@@ -30,9 +30,9 @@ export function Sidebar({ isOpen, onClose, collapsed, onToggleCollapse }) {
   const location = useLocation()
   const { user, projects, logoutUser } = useProject()
 
-  const userName = user?.fullName || "Aditya Kumar"
+  const userName = user?.fullName || "Workspace Member"
   const userInitials = userName.split(" ").map((n) => n[0]).join("")
-  const userEmail = user?.email || "admin@workspace.com"
+  const userEmail = user?.email || ""
 
   // Structured Nav Menu Groups
   const mainNav = [

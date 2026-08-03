@@ -5,7 +5,7 @@ import { useProject } from "@/context/ProjectContext"
 import { ProjectForm } from "./ProjectForm"
 
 export function CreateProjectModal({ open, onOpenChange, onProjectCreated }) {
-  const { addProject } = useProject()
+  const { fetchProjects } = useProject()
   const [isLoading, setIsLoading] = useState(false)
   const [serverError, setServerError] = useState("")
 
@@ -19,31 +19,15 @@ export function CreateProjectModal({ open, onOpenChange, onProjectCreated }) {
       const res = await api.post("/projects", payload)
       const createdData = res.data?.project || res.data || {}
 
-      const formattedProject = {
-        id: createdData.project_id || createdData.id || `proj-${Date.now()}`,
-        key: createdData.project_name
-          ? createdData.project_name.substring(0, 3).toUpperCase()
-          : "PRO",
-        name: createdData.project_name || payload.project_name,
-        description: createdData.project_description || payload.project_description || "",
-        category: createdData.category_name || "Development",
-        status: createdData.status_name || "In Progress",
-        createdAt: createdData.created_at
-          ? new Date(createdData.created_at).toLocaleDateString("en-US", {
-              month: "short",
-              day: "numeric",
-              year: "numeric",
-            })
-          : "Just now",
-        tasksCount: 0,
-      }
-
-      if (addProject) {
-        addProject(formattedProject)
+      // Refetch the canonical project list from the backend so the newly created
+      // project shows up everywhere (Projects page, Dashboard) with its full,
+      // correctly-shaped data instead of a partial optimistic local insert.
+      if (fetchProjects) {
+        await fetchProjects()
       }
 
       if (onProjectCreated) {
-        onProjectCreated(formattedProject)
+        onProjectCreated(createdData)
       }
 
       onOpenChange(false)

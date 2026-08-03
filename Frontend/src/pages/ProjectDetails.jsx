@@ -384,6 +384,7 @@ export function ProjectDetails() {
             tasks={tasks}
             onUpdateTaskStatus={handleUpdateTaskStatus}
             onDeleteTask={handleDeleteTask}
+            onTaskUpdated={loadProjectAndTasks}
             projectId={project.id}
           />
         )}
@@ -395,7 +396,7 @@ export function ProjectDetails() {
           open={showCreateTaskModal}
           onOpenChange={setShowCreateTaskModal}
           projectId={project.id}
-          onTaskCreated={loadProjectAndTasks}
+          onCreateTask={loadProjectAndTasks}
         />
       )}
 

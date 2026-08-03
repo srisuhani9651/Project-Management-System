@@ -10,7 +10,7 @@ import { ProjectForm } from "@/components/project/ProjectForm"
  */
 export function CreateProject() {
   const navigate = useNavigate()
-  const { addProject } = useProject()
+  const { fetchProjects } = useProject()
   const [serverError, setServerError] = useState("")
   const [isLoading, setIsLoading] = useState(false)
 
@@ -19,30 +19,12 @@ export function CreateProject() {
     setIsLoading(true)
 
     try {
-      const res = await api.post("/projects", payload)
-      const createdData = res.data?.project || res.data || {}
+      await api.post("/projects", payload)
 
-      const formattedProject = {
-        id: createdData.project_id || createdData.id || `proj-${Date.now()}`,
-        key: createdData.project_name
-          ? createdData.project_name.substring(0, 3).toUpperCase()
-          : "PRO",
-        name: createdData.project_name || payload.project_name,
-        description: createdData.project_description || payload.project_description || "",
-        category: createdData.category_name || "Development",
-        status: createdData.status_name || "In Progress",
-        createdAt: createdData.created_at
-          ? new Date(createdData.created_at).toLocaleDateString("en-US", {
-              month: "short",
-              day: "numeric",
-              year: "numeric",
-            })
-          : "Just now",
-        tasksCount: 0,
-      }
-
-      if (addProject) {
-        addProject(formattedProject)
+      // Refetch the canonical project list so the newly created project shows up
+      // everywhere (Projects page, Dashboard) with its full, correctly-shaped data.
+      if (fetchProjects) {
+        await fetchProjects()
       }
 
       navigate("/projects")
