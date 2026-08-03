@@ -37,7 +37,7 @@ import { useProject } from "@/context/ProjectContext"
 export function TaskDetails() {
   const { taskId } = useParams()
   const navigate = useNavigate()
-  const { user } = useProject()
+  const { user, authorize } = useProject()
 
   const [task, setTask] = useState(null)
   const [loading, setLoading] = useState(true)
@@ -421,6 +421,8 @@ export function TaskDetails() {
     createdBy: creatorName,
     created_by: task.created_by
   }
+
+  const canEditTask = authorize ? authorize(user, "update", "task", task) : true
 
   return (
     <div className="flex-1 py-8 px-4 sm:px-6 lg:px-8 max-w-6xl mx-auto w-full space-y-6 animate-fade-in">

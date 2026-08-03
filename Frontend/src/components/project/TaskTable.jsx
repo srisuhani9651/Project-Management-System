@@ -71,11 +71,11 @@ export function TaskTable({ tasks = [], onDeleteTask, onUpdateTaskStatus, onCrea
 
   return (
     <div className="pt-2 space-y-4 animate-fade-in font-roboto">
-      
+
       {/* Search & Filter Toolbar */}
       <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
         <div className="flex flex-wrap items-center gap-2.5 flex-1">
-          
+
           {/* Search Input */}
           <div className="relative w-full sm:w-64">
             <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
@@ -112,17 +112,6 @@ export function TaskTable({ tasks = [], onDeleteTask, onUpdateTaskStatus, onCrea
             <option value="Low">Priority: Low</option>
           </select>
         </div>
-
-        {/* Create Task Button */}
-        <PermissionButton
-          action="create"
-          resource="task"
-          size="sm"
-          onClick={onCreateTask}
-          className="gap-1.5 font-poppins font-semibold text-xs rounded-xl bg-blue-600 hover:bg-blue-700 text-white shadow-xs transition-all shrink-0 cursor-pointer"
-        >
-          <Plus className="h-4 w-4 stroke-[2.5]" /> Create New Task
-        </PermissionButton>
       </div>
 
       {/* Task Data Table */}
@@ -152,7 +141,7 @@ export function TaskTable({ tasks = [], onDeleteTask, onUpdateTaskStatus, onCrea
 
                 return (
                   <TableRow key={taskId} className="hover:bg-muted/30 transition-colors">
-                    
+
                     {/* Task Title & Description */}
                     <TableCell className="font-semibold text-xs py-3">
                       <div>
@@ -194,13 +183,12 @@ export function TaskTable({ tasks = [], onDeleteTask, onUpdateTaskStatus, onCrea
                           statusVal.toLowerCase().includes("done") || statusVal.toLowerCase().includes("completed")
                             ? "Done"
                             : statusVal.toLowerCase().includes("progress")
-                            ? "In Progress"
-                            : "To Do"
+                              ? "In Progress"
+                              : "To Do"
                         }
                         onChange={(e) => canEdit && onUpdateTaskStatus(taskId, e.target.value)}
-                        className={`h-7 text-[11px] font-semibold rounded-lg border border-border/70 bg-muted/20 px-2 text-foreground focus:outline-none focus:ring-1 focus:ring-blue-500/30 transition-colors ${
-                          !canEdit ? "opacity-60 cursor-not-allowed bg-muted/40" : "cursor-pointer hover:bg-card"
-                        }`}
+                        className={`h-7 text-[11px] font-semibold rounded-lg border border-border/70 bg-muted/20 px-2 text-foreground focus:outline-none focus:ring-1 focus:ring-blue-500/30 transition-colors ${!canEdit ? "opacity-60 cursor-not-allowed bg-muted/40" : "cursor-pointer hover:bg-card"
+                          }`}
                       >
                         <option value="To Do">To Do</option>
                         <option value="In Progress">In Progress</option>

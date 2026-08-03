@@ -12,7 +12,7 @@ import {
   ChevronDown
 } from "lucide-react"
 import { useProject } from "@/context/ProjectContext"
-import { Input } from "@/components/ui/input"
+import { GlobalSearch } from "@/components/common/GlobalSearch"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 
 /**
@@ -25,7 +25,6 @@ export function Navbar() {
   const location = useLocation()
   const { user, logoutUser } = useProject()
   const [profileOpen, setProfileOpen] = useState(false)
-  const [searchQuery, setSearchQuery] = useState("")
 
   const token = localStorage.getItem("pf_token")
   const isAuthenticated = Boolean(user || token)
@@ -94,19 +93,10 @@ export function Navbar() {
           )}
         </div>
 
-        {/* Center: Search Bar (Only visible in workspace) */}
+        {/* Center: Global Fuzzy Search Bar (Only visible in workspace) */}
         {showWorkspaceNav && (
           <div className="flex-1 max-w-md mx-2 hidden md:block">
-            <div className="relative w-full">
-              <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
-              <Input
-                type="text"
-                placeholder="Search projects, tasks, or metrics..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-9 pr-4 h-9 text-xs rounded-xl bg-muted/40 border-border/70 focus-visible:ring-blue-600 w-full"
-              />
-            </div>
+            <GlobalSearch />
           </div>
         )}
 
