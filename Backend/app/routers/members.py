@@ -13,6 +13,7 @@ from app.services.schemas.member import (
     AddMembersRequest,
     AddMembersResponse,
     ProjectMemberResponse,
+    RemoveMemberResponse,
     UserDropdownItem,
 )
 
@@ -61,3 +62,15 @@ def add_members(
     """Adds multiple members to a project (Enforces PBAC Project Update - Owner only)."""
     authorize(current_user, Action.PROJECT_UPDATE, payload.project_id, db)
     return MemberService.add_members(db, payload.project_id, payload.user_ids)
+
+
+@router.delete("/{project_member_id}", response_model=RemoveMemberResponse, status_code=status.HTTP_200_OK, summary="Remove a project member")
+def remove_member(
+    project_member_id: UUID,
+    db: Session = Depends(get_db),
+    current_user: UserMaster = Depends(get_current_user)
+):
+    """Removes a member from a project (Enforces PBAC Project Update - Owner only). The project owner cannot be removed."""
+    member = MemberService.get_member_or_404(db, project_member_id)
+    authorize(current_user, Action.PROJECT_UPDATE, member.project_id, db)
+    return MemberService.remove_member(db, project_member_id)

@@ -38,3 +38,8 @@ class AddMembersResponse(BaseModel):
     added: int
     skipped: int
     members: List[ProjectMemberResponse]
+
+
+class RemoveMemberResponse(BaseModel):
+    message: str
+    project_member_id: UUID

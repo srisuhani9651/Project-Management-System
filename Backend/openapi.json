@@ -1348,6 +1348,55 @@
         ]
       }
     },
+    "/api/members/{project_member_id}": {
+      "delete": {
+        "tags": [
+          "Project Members"
+        ],
+        "summary": "Remove a project member",
+        "description": "Removes a member from a project (Enforces PBAC Project Update - Owner only). The project owner cannot be removed.",
+        "operationId": "remove_member_api_members__project_member_id__delete",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "project_member_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Project Member Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RemoveMemberResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/search": {
       "get": {
         "tags": [
@@ -2312,6 +2361,25 @@
         ],
         "title": "RegisterResponse",
         "description": "WHAT IT DOES: Response schema returned after successful registration.\nEXPECTED RESULT: Contains success message, JWT access token, and created user details."
+      },
+      "RemoveMemberResponse": {
+        "properties": {
+          "message": {
+            "type": "string",
+            "title": "Message"
+          },
+          "project_member_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Project Member Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "message",
+          "project_member_id"
+        ],
+        "title": "RemoveMemberResponse"
       },
       "ResetPasswordRequest": {
         "properties": {

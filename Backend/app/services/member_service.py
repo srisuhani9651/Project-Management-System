@@ -1,6 +1,7 @@
-from typing import List, Optional
+from typing import Any, Dict, List, Optional
 from uuid import UUID
 
+from fastapi import HTTPException, status
 from sqlalchemy.orm import Session
 
 from app.models.auth.user_master import UserMaster
@@ -140,3 +141,41 @@ class MemberService:
                     )
 
         return member_list
+
+    @staticmethod
+    def get_member_or_404(db: Session, project_member_id: UUID) -> ProjectMember:
+        """Fetches an active project member record or raises 404."""
+        member = db.query(ProjectMember).filter(
+            ProjectMember.project_member_id == project_member_id,
+            ProjectMember.is_active == True
+        ).first()
+
+        if not member:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Project member with ID '{project_member_id}' not found."
+            )
+        return member
+
+    @staticmethod
+    def remove_member(db: Session, project_member_id: UUID) -> Dict[str, Any]:
+        """
+        Removes (deactivates) a member from a project.
+        The project owner cannot be removed via this endpoint.
+        """
+        member = MemberService.get_member_or_404(db, project_member_id)
+
+        project = db.query(Project).filter(Project.project_id == member.project_id).first()
+        if project and str(project.created_by) == str(member.user_id):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="The project owner cannot be removed from the project."
+            )
+
+        member.is_active = False
+        db.commit()
+
+        return {
+            "message": "Member removed successfully.",
+            "project_member_id": member.project_member_id,
+        }
