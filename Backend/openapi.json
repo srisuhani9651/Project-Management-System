@@ -197,7 +197,7 @@
           "Projects & Tasks Management"
         ],
         "summary": "Unified Create API (Path variable differentiator: 'project' or 'task')",
-        "description": "Creates a new Project or Task depending on the '{entity_type}' path variable ('project' or 'task').",
+        "description": "Creates a new Project or Task depending on the '{entity_type}' path variable ('project' or 'task'). Enforces PBAC.",
         "operationId": "manage_create_entity_api_manage__entity_type__post",
         "security": [
           {
@@ -257,7 +257,7 @@
           "Projects & Tasks Management"
         ],
         "summary": "Unified Update API (Path variable differentiator: 'project' or 'task' + entity_id)",
-        "description": "Updates an existing Project or Task depending on '{entity_type}' path variable and '{entity_id}'.",
+        "description": "Updates an existing Project or Task depending on '{entity_type}' path variable and '{entity_id}'. Enforces PBAC.",
         "operationId": "manage_update_entity_api_manage__entity_type___entity_id__post",
         "security": [
           {
@@ -319,6 +319,62 @@
             }
           }
         }
+      },
+      "delete": {
+        "tags": [
+          "Projects & Tasks Management"
+        ],
+        "summary": "Unified Delete API (Path variable differentiator: 'project' or 'task' + entity_id)",
+        "description": "Deletes an existing Project or Task. Enforces PBAC.",
+        "operationId": "manage_delete_entity_api_manage__entity_type___entity_id__delete",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "entity_type",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Entity Type"
+            }
+          },
+          {
+            "name": "entity_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Entity Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "title": "Response Manage Delete Entity Api Manage  Entity Type   Entity Id  Delete"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
       }
     },
     "/projects/lov": {
@@ -354,7 +410,7 @@
           "Projects & Tasks Management"
         ],
         "summary": "List user projects",
-        "description": "Fetch all projects created by current user.",
+        "description": "Fetch all projects where current user is owner or member.",
         "operationId": "list_projects_projects_get",
         "responses": {
           "200": {
@@ -430,7 +486,7 @@
           "Projects & Tasks Management"
         ],
         "summary": "Update a project by ID",
-        "description": "Direct route to update an existing project.",
+        "description": "Direct route to update an existing project (Enforces PBAC).",
         "operationId": "update_project_projects__project_id__post",
         "security": [
           {
@@ -482,13 +538,58 @@
           }
         }
       },
+      "delete": {
+        "tags": [
+          "Projects & Tasks Management"
+        ],
+        "summary": "Delete a project by ID",
+        "description": "Direct route to delete an existing project (Enforces PBAC).",
+        "operationId": "delete_project_projects__project_id__delete",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Project Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
       "get": {
         "tags": [
           "Projects & Tasks Management"
         ],
         "summary": "Get project details by ID",
-        "description": "Fetch a single project by ID.",
-        "operationId": "get_project_projects__project_id__get",
+        "description": "Fetch a single project by ID (Enforces PBAC Project Visibility).",
+        "operationId": "get_project_by_id_projects__project_id__get",
         "security": [
           {
             "HTTPBearer": []
@@ -536,7 +637,7 @@
           "Projects & Tasks Management"
         ],
         "summary": "Create a new task",
-        "description": "Direct route to create a new task.",
+        "description": "Direct route to create a new task (Enforces PBAC Task Creation).",
         "operationId": "create_task_tasks_post",
         "security": [
           {
@@ -581,7 +682,7 @@
           "Projects & Tasks Management"
         ],
         "summary": "List all tasks",
-        "description": "Fetch all tasks, optionally filtered by project_id.",
+        "description": "Fetch tasks strictly enforcing PBAC policy rules at the database query level.",
         "operationId": "list_tasks_tasks_get",
         "security": [
           {
@@ -604,6 +705,73 @@
                 }
               ],
               "title": "Project Id"
+            }
+          },
+          {
+            "name": "assignee_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Assignee Id"
+            }
+          },
+          {
+            "name": "status_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status Id"
+            }
+          },
+          {
+            "name": "priority_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Priority Id"
+            }
+          },
+          {
+            "name": "search",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Search"
             }
           }
         ],
@@ -641,7 +809,7 @@
           "Projects & Tasks Management"
         ],
         "summary": "Update a task by ID",
-        "description": "Direct route to update an existing task.",
+        "description": "Direct route to update an existing task (Enforces PBAC Task Update & Task Completion).",
         "operationId": "update_task_tasks__task_id__post",
         "security": [
           {
@@ -693,13 +861,58 @@
           }
         }
       },
+      "delete": {
+        "tags": [
+          "Projects & Tasks Management"
+        ],
+        "summary": "Delete a task by ID",
+        "description": "Direct route to delete an existing task (Enforces PBAC Task Delete).",
+        "operationId": "delete_task_tasks__task_id__delete",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "task_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Task Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
       "get": {
         "tags": [
           "Projects & Tasks Management"
         ],
         "summary": "Get task details by ID",
-        "description": "Fetch a single task by ID.",
-        "operationId": "get_task_tasks__task_id__get",
+        "description": "Fetch a single task by ID (Enforces PBAC Task View policy).",
+        "operationId": "get_task_by_id_tasks__task_id__get",
         "security": [
           {
             "HTTPBearer": []
@@ -746,8 +959,7 @@
         "tags": [
           "Dashboard Analytics"
         ],
-        "summary": "Get Single Unified Dashboard Telemetry API",
-        "description": "Returns all dynamic metrics (Pending Tasks, Task Distribution by Project, Time Analytics, and Productivity Insights) calculated directly from PostgreSQL project & task data.",
+        "summary": "Get Unified Dashboard Telemetry for current user",
         "operationId": "get_dashboard_telemetry_api_dashboard_get",
         "responses": {
           "200": {
@@ -762,7 +974,12 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
       }
     },
     "/dashboard": {
@@ -770,8 +987,7 @@
         "tags": [
           "Dashboard Analytics"
         ],
-        "summary": "Get Single Unified Dashboard Telemetry API (Alias)",
-        "description": "Alias route for GET /api/dashboard.",
+        "summary": "Get Unified Dashboard Telemetry (Alias)",
         "operationId": "get_dashboard_telemetry_alias_dashboard_get",
         "responses": {
           "200": {
@@ -786,7 +1002,143 @@
               }
             }
           }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/api/members/users": {
+      "get": {
+        "tags": [
+          "Project Members"
+        ],
+        "summary": "Get all users for dropdown",
+        "description": "Returns all users as value/label items for a multi-select dropdown.",
+        "operationId": "get_users_dropdown_api_members_users_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/UserDropdownItem"
+                  },
+                  "type": "array",
+                  "title": "Response Get Users Dropdown Api Members Users Get"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/api/members/{project_id}": {
+      "get": {
+        "tags": [
+          "Project Members"
+        ],
+        "summary": "Get project members",
+        "description": "Returns all active members for a project (Enforces PBAC Project Visibility).",
+        "operationId": "get_project_members_api_members__project_id__get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Project Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ProjectMemberResponse"
+                  },
+                  "title": "Response Get Project Members Api Members  Project Id  Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
         }
+      }
+    },
+    "/api/members": {
+      "post": {
+        "tags": [
+          "Project Members"
+        ],
+        "summary": "Add members to a project",
+        "description": "Adds multiple members to a project (Enforces PBAC Project Update - Owner only).",
+        "operationId": "add_members_api_members_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AddMembersRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AddMembersResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
       }
     },
     "/": {
@@ -809,6 +1161,61 @@
   },
   "components": {
     "schemas": {
+      "AddMembersRequest": {
+        "properties": {
+          "project_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Project Id"
+          },
+          "user_ids": {
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "type": "array",
+            "title": "User Ids"
+          }
+        },
+        "type": "object",
+        "required": [
+          "project_id",
+          "user_ids"
+        ],
+        "title": "AddMembersRequest",
+        "description": "Payload to add multiple members to a project."
+      },
+      "AddMembersResponse": {
+        "properties": {
+          "message": {
+            "type": "string",
+            "title": "Message"
+          },
+          "added": {
+            "type": "integer",
+            "title": "Added"
+          },
+          "skipped": {
+            "type": "integer",
+            "title": "Skipped"
+          },
+          "members": {
+            "items": {
+              "$ref": "#/components/schemas/ProjectMemberResponse"
+            },
+            "type": "array",
+            "title": "Members"
+          }
+        },
+        "type": "object",
+        "required": [
+          "message",
+          "added",
+          "skipped",
+          "members"
+        ],
+        "title": "AddMembersResponse"
+      },
       "CreateProjectResponse": {
         "properties": {
           "message": {
@@ -1067,6 +1474,60 @@
           "categories"
         ],
         "title": "ProjectLOVResponse"
+      },
+      "ProjectMemberResponse": {
+        "properties": {
+          "project_member_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Project Member Id"
+          },
+          "project_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Project Id"
+          },
+          "user_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "User Id"
+          },
+          "full_name": {
+            "type": "string",
+            "title": "Full Name"
+          },
+          "email": {
+            "type": "string",
+            "title": "Email"
+          },
+          "joined_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Joined At"
+          },
+          "is_active": {
+            "type": "boolean",
+            "title": "Is Active"
+          }
+        },
+        "type": "object",
+        "required": [
+          "project_member_id",
+          "project_id",
+          "user_id",
+          "full_name",
+          "email",
+          "is_active"
+        ],
+        "title": "ProjectMemberResponse",
+        "description": "A single project member record."
       },
       "ProjectResponse": {
         "properties": {
@@ -1585,6 +2046,17 @@
             "format": "uuid",
             "title": "Project Id"
           },
+          "project_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Project Name"
+          },
           "title": {
             "type": "string",
             "title": "Title"
@@ -1703,6 +2175,28 @@
               }
             ],
             "title": "Created By"
+          },
+          "creator_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Creator Name"
+          },
+          "created_by_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created By Name"
           },
           "due_date": {
             "anyOf": [
@@ -1943,6 +2437,26 @@
           "task"
         ],
         "title": "UpdateTaskResponse"
+      },
+      "UserDropdownItem": {
+        "properties": {
+          "value": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Value"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label"
+          }
+        },
+        "type": "object",
+        "required": [
+          "value",
+          "label"
+        ],
+        "title": "UserDropdownItem",
+        "description": "For multi-select dropdown: value/label pair."
       },
       "UserLogin": {
         "properties": {

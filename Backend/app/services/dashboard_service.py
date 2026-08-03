@@ -1,11 +1,14 @@
 from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, List, Optional
+from sqlalchemy import or_
 from sqlalchemy.orm import Session
 
 from app.models.tracker.project import Project
+from app.models.tracker.project_members import ProjectMember
 from app.models.tracker.tasks import Task
 from app.models.lov.status import Status
 from app.models.lov.priority import Priority
+from app.models.auth.user_master import UserMaster
 
 
 class DashboardService:
@@ -20,9 +23,39 @@ class DashboardService:
         """
         Unified service method to compute all Dashboard widget datasets in a single response payload.
         """
-        # Fetch active projects & tasks
-        projects = db.query(Project).filter(Project.is_active == True).all()
-        tasks = db.query(Task).filter(Task.is_active == True).all()
+        # Fetch active projects & tasks filtered by current user
+        project_q = db.query(Project).filter(Project.is_active == True)
+        task_q = db.query(Task).filter(Task.is_active == True)
+
+        if current_user_id:
+            owned_proj_ids = [
+                p[0]
+                for p in db.query(Project.project_id).filter(
+                    Project.created_by == current_user_id,
+                    Project.is_active == True
+                ).all()
+            ]
+            member_proj_ids = [
+                m[0]
+                for m in db.query(ProjectMember.project_id).filter(
+                    ProjectMember.user_id == current_user_id,
+                    ProjectMember.is_active == True
+                ).all()
+            ]
+            accessible_proj_ids = list(set(owned_proj_ids + member_proj_ids))
+
+            project_q = project_q.filter(Project.project_id.in_(accessible_proj_ids))
+            
+            # Tasks query: All tasks in owned projects + tasks assigned to the user
+            task_q = task_q.filter(
+                or_(
+                    Task.project_id.in_(owned_proj_ids),
+                    Task.assignee_id == current_user_id
+                )
+            )
+
+        projects = project_q.all()
+        tasks = task_q.all()
 
         # Cache lookup mappings for Status and Priority
         statuses = {s.status_id: s.status_name for s in db.query(Status).all()}
@@ -94,6 +127,40 @@ class DashboardService:
         # 4. PRODUCTIVITY INSIGHTS (today, week, month, ytd)
         productivity_insights = DashboardService._calculate_productivity_insights(tasks, statuses)  # type: ignore
 
+        # 5. RECENTLY CREATED OR UPDATED TASKS
+        users_map = {u.user_id: (u.full_name or u.username or "User") for u in db.query(UserMaster).all()}
+        sorted_tasks = sorted(
+            tasks,
+            key=lambda t: (t.updated_at or t.created_at or datetime.min),
+            reverse=True
+        )
+
+        recent_tasks_list = []
+        for t in sorted_tasks[:10]:
+            st_name = statuses.get(t.status_id, "To Do")
+            pr_name = priorities.get(t.priority_id, "Medium")
+            proj_name = project_names.get(t.project_id, "Project")
+            user_name = users_map.get(t.created_by, "You")
+
+            updated_time = t.updated_at or t.created_at
+            is_updated = t.updated_at is not None and t.created_at is not None and t.updated_at > t.created_at
+
+            recent_tasks_list.append({
+                "id": str(t.task_id),
+                "task_id": str(t.task_id),
+                "project_id": str(t.project_id) if t.project_id else None,
+                "title": t.title,
+                "description": t.description or "",
+                "projectName": proj_name,
+                "status": st_name,
+                "priority": pr_name,
+                "creator_id": str(t.created_by) if t.created_by else None,
+                "creator_name": user_name,
+                "action": "Updated" if is_updated else "Created",
+                "timestamp": updated_time.isoformat() if updated_time else None,
+                "formatted_time": updated_time.strftime("%b %d, %I:%M %p") if updated_time else "Recently"
+            })
+
         return {
             "pendingTasks": {
                 "counts": pending_counts,
@@ -105,7 +172,11 @@ class DashboardService:
                 "items": distribution_items
             },
             "timeAnalytics": time_analytics,
-            "productivityInsights": productivity_insights
+            "productivityInsights": productivity_insights,
+            "recentTasks": {
+                "total": len(recent_tasks_list),
+                "tasks": recent_tasks_list
+            }
         }
 
     @staticmethod

@@ -3,6 +3,8 @@ from fastapi import APIRouter, Depends, status
 from sqlalchemy.orm import Session
 
 from app.db.database import get_db
+from app.middleware.auth_middleware import get_current_user
+from app.models.auth.user_master import UserMaster
 from app.services.dashboard_service import DashboardService
 
 router = APIRouter(prefix="", tags=["Dashboard Analytics"])
@@ -11,26 +13,26 @@ router = APIRouter(prefix="", tags=["Dashboard Analytics"])
 @router.get(
     "/api/dashboard",
     status_code=status.HTTP_200_OK,
-    summary="Get Single Unified Dashboard Telemetry API",
-    description="Returns all dynamic metrics (Pending Tasks, Task Distribution by Project, Time Analytics, and Productivity Insights) calculated directly from PostgreSQL project & task data."
+    summary="Get Unified Dashboard Telemetry for current user",
 )
 def get_dashboard_telemetry(
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: UserMaster = Depends(get_current_user),
 ) -> Dict[str, Any]:
-    """
-    Single unified API returning live, dynamic dashboard data.
-    """
-    return DashboardService.get_full_dashboard_telemetry(db=db)
+    return DashboardService.get_full_dashboard_telemetry(
+        db=db, current_user_id=current_user.user_id  # type: ignore
+    )
 
 
 @router.get(
     "/dashboard",
     status_code=status.HTTP_200_OK,
-    summary="Get Single Unified Dashboard Telemetry API (Alias)",
-    description="Alias route for GET /api/dashboard."
+    summary="Get Unified Dashboard Telemetry (Alias)",
 )
 def get_dashboard_telemetry_alias(
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: UserMaster = Depends(get_current_user),
 ) -> Dict[str, Any]:
-    """Alias for single unified dashboard endpoint."""
-    return DashboardService.get_full_dashboard_telemetry(db=db)
+    return DashboardService.get_full_dashboard_telemetry(
+        db=db, current_user_id=current_user.user_id  # type: ignore
+    )

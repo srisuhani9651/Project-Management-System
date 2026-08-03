@@ -1,15 +1,17 @@
-from typing import Any, List, Optional
+from typing import Any, Dict, List, Optional
 from uuid import UUID
 from fastapi import HTTPException, status
 from sqlalchemy.orm import Session
 
 from app.models.tracker.project import Project
+from app.models.tracker.project_members import ProjectMember
 from app.models.tracker.tasks import Task
 from app.models.lov.category import Category
 from app.models.lov.priority import Priority
 from app.models.lov.project_type import ProjectType
 from app.models.lov.status import Status
 from app.models.lov.task_type import TaskType
+from sqlalchemy import or_
 from app.services.schemas.project import (
     CreateProjectResponse,
     LOVItem,
@@ -134,12 +136,49 @@ class ProjectService:
         )
 
     @staticmethod
-    def get_all_projects(current_user_id: Any, db: Session) -> List[ProjectResponse]:
-        """Retrieves all active projects created by the user."""
-        projects = db.query(Project).filter(
-            Project.created_by == current_user_id,
+    def delete_project(project_id: Any, db: Session) -> Dict[str, Any]:
+        """Business logic to soft-delete a project."""
+        project = db.query(Project).filter(
+            Project.project_id == project_id,
             Project.is_active == True
-        ).order_by(Project.created_at.desc()).all()
+        ).first()
+
+        if not project:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Project with ID '{project_id}' not found."
+            )
+
+        project.is_active = False
+        db.commit()
+
+        return {"message": f"Project '{project_id}' deleted successfully"}
+
+    @staticmethod
+    def get_all_projects(current_user_id: Any, db: Session) -> List[ProjectResponse]:
+        """Retrieves all active projects where the user is the owner OR an active member."""
+        # Subquery: project IDs where user is an active member
+        member_project_ids = (
+            db.query(ProjectMember.project_id)  # type: ignore
+            .filter(
+                ProjectMember.user_id == current_user_id,  # type: ignore
+                ProjectMember.is_active == True  # type: ignore
+            )
+            .subquery()
+        )
+
+        projects = (
+            db.query(Project)
+            .filter(
+                Project.is_active == True,
+                or_(
+                    Project.created_by == current_user_id,  # type: ignore
+                    Project.project_id.in_(member_project_ids)  # type: ignore
+                )
+            )
+            .order_by(Project.created_at.desc())  # type: ignore
+            .all()
+        )
 
         return [ProjectService._format_project_response(p, db) for p in projects]
 

@@ -1,6 +1,7 @@
-from typing import Any, List, Optional
+from typing import Any, Dict, List, Optional
 from uuid import UUID
 from fastapi import HTTPException, status
+from sqlalchemy import or_
 from sqlalchemy.orm import Session
 
 from app.models.auth.user_master import UserMaster
@@ -10,6 +11,7 @@ from app.models.lov.project_type import ProjectType
 from app.models.lov.status import Status
 from app.models.lov.task_type import TaskType
 from app.models.tracker.project import Project
+from app.models.tracker.project_members import ProjectMember
 from app.models.tracker.tasks import Task
 from app.services.schemas.task import (
     CreateTaskResponse,
@@ -27,7 +29,7 @@ class TaskService:
         current_user_id: Any,
         db: Session
     ) -> CreateTaskResponse:
-        """Business logic to create a new Task record with robust fallback checks."""
+        """Business logic to create a new Task record."""
         # 1. Verify parent project exists
         project = db.query(Project).filter(
             Project.project_id == task_data.project_id,
@@ -35,51 +37,18 @@ class TaskService:
         ).first()
 
         if not project:
-            # Fallback to any active project
-            fallback_project = db.query(Project).filter(Project.is_active == True).first()
-            if fallback_project:
-                task_data.project_id = fallback_project.project_id  # type: ignore
-            else:
-                # Auto-create a default project if DB contains 0 active projects
-                status_obj = db.query(Status).filter(Status.is_active == True).first()
-                priority_obj = db.query(Priority).filter(Priority.is_active == True).first()
-                p_type_obj = db.query(ProjectType).filter(ProjectType.is_active == True).first()
-                cat_obj = db.query(Category).filter(Category.is_active == True).first()
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Parent project with ID '{task_data.project_id}' not found."
+            )
 
-                if status_obj and priority_obj and p_type_obj and cat_obj:
-                    new_proj = Project(
-                        project_name="General Workspace",
-                        project_description="Auto-generated default project for tasks",
-                        status_id=status_obj.status_id,
-                        priority_id=priority_obj.priority_id,
-                        project_type_id=p_type_obj.project_type_id,
-                        category_id=cat_obj.category_id,
-                        created_by=current_user_id,
-                        is_active=True
-                    )
-                    db.add(new_proj)
-                    db.commit()
-                    db.refresh(new_proj)
-                    task_data.project_id = new_proj.project_id  # type: ignore
-                else:
-                    raise HTTPException(
-                        status_code=status.HTTP_404_NOT_FOUND,
-                        detail=f"Parent project with ID '{task_data.project_id}' not found and could not create default project."
-                    )
-
-        # 2. Verify assignee_id exists in auth.user_master
-        assignee = db.query(UserMaster).filter(UserMaster.user_id == task_data.assignee_id).first()
-        if not assignee:
+        # 2. Verify assignee_id exists in auth.user_master if specified
+        if task_data.assignee_id:
+            assignee = db.query(UserMaster).filter(UserMaster.user_id == task_data.assignee_id).first()
+            if not assignee:
+                task_data.assignee_id = current_user_id
+        else:
             task_data.assignee_id = current_user_id
-
-        # 3. Verify creator user_id exists in auth.user_master
-        creator = db.query(UserMaster).filter(UserMaster.user_id == current_user_id).first()
-        if not creator:
-            any_user = db.query(UserMaster).first()
-            if any_user:
-                current_user_id = any_user.user_id  # type: ignore
-                if not db.query(UserMaster).filter(UserMaster.user_id == task_data.assignee_id).first():
-                    task_data.assignee_id = any_user.user_id  # type: ignore
 
         new_task = Task(
             project_id=task_data.project_id,
@@ -98,6 +67,9 @@ class TaskService:
         db.add(new_task)
         db.commit()
         db.refresh(new_task)
+
+        # Auto-add assigned user to project_members table if not already present
+        TaskService._ensure_assignee_is_project_member(new_task.project_id, new_task.assignee_id, db)
 
         task_res = TaskService._format_task_response(new_task, db)
 
@@ -143,6 +115,9 @@ class TaskService:
         db.commit()
         db.refresh(task)
 
+        # Auto-add assigned user to project_members table if not already present
+        TaskService._ensure_assignee_is_project_member(task.project_id, task.assignee_id, db)
+
         task_res = TaskService._format_task_response(task, db)
 
         return UpdateTaskResponse(
@@ -151,14 +126,116 @@ class TaskService:
         )
 
     @staticmethod
-    def get_all_tasks(project_id: Optional[Any], db: Session) -> List[TaskResponse]:
-        """Retrieves active tasks, optionally filtered by project_id."""
-        query = db.query(Task).filter(Task.is_active == True)
-        if project_id:
-            query = query.filter(Task.project_id == project_id)
+    def _ensure_assignee_is_project_member(project_id: Any, assignee_id: Any, db: Session):
+        """Ensures the assigned user is an active member in tracker.project_members for project_id."""
+        if not project_id or not assignee_id:
+            return
 
-        tasks = query.order_by(Task.created_at.desc()).all()
-        return [TaskService._format_task_response(t, db) for t in tasks]
+        try:
+            member = db.query(ProjectMember).filter(
+                ProjectMember.project_id == project_id,
+                ProjectMember.user_id == assignee_id
+            ).first()
+
+            if not member:
+                new_member = ProjectMember(project_id=project_id, user_id=assignee_id, is_active=True)
+                db.add(new_member)
+                db.commit()
+            elif not member.is_active:
+                member.is_active = True
+                db.commit()
+        except Exception:
+            db.rollback()
+
+    @staticmethod
+    def delete_task(task_id: Any, db: Session) -> Dict[str, Any]:
+        """Business logic to soft-delete a task."""
+        task = db.query(Task).filter(
+            Task.task_id == task_id,
+            Task.is_active == True
+        ).first()
+
+        if not task:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Task with ID '{task_id}' not found."
+            )
+
+        task.is_active = False
+        db.commit()
+
+        return {"message": f"Task '{task_id}' deleted successfully"}
+
+    @staticmethod
+    def get_all_tasks(
+        db: Session,
+        current_user_id: Optional[Any] = None,
+        project_id: Optional[Any] = None,
+        assignee_id: Optional[Any] = None,
+        status_id: Optional[Any] = None,
+        priority_id: Optional[Any] = None,
+        search: Optional[str] = None,
+    ) -> List[TaskResponse]:
+        """
+        Retrieves active tasks strictly filtered by PBAC policy rules at the database query level:
+        - Project Owner (Project.created_by == current_user_id): can view ALL tasks in their projects.
+        - Non-owner Project Member: can ONLY view tasks assigned to or created by them.
+        """
+        query = db.query(Task).filter(Task.is_active == True)
+
+        if project_id:
+            query = query.filter(Task.project_id == project_id)  # type: ignore
+
+            if current_user_id:
+                project = db.query(Project).filter(Project.project_id == project_id, Project.is_active == True).first()
+                is_owner = project and str(project.created_by) == str(current_user_id)
+
+                if not is_owner:
+                    # Non-owner members can ONLY view tasks assigned to or created by them
+                    query = query.filter(
+                        or_(
+                            Task.assignee_id == current_user_id,  # type: ignore
+                            Task.created_by == current_user_id  # type: ignore
+                        )
+                    )
+        elif current_user_id:
+            # Global task query for user: All tasks in projects they own + tasks assigned to or created by them
+            owned_project_ids = [
+                p[0]
+                for p in db.query(Project.project_id).filter(
+                    Project.created_by == current_user_id,
+                    Project.is_active == True
+                ).all()
+            ]
+
+            query = query.filter(
+                or_(
+                    Task.project_id.in_(owned_project_ids),  # type: ignore
+                    Task.assignee_id == current_user_id,  # type: ignore
+                    Task.created_by == current_user_id  # type: ignore
+                )
+            )
+
+        if assignee_id:
+            query = query.filter(Task.assignee_id == assignee_id)  # type: ignore
+
+        if status_id:
+            query = query.filter(Task.status_id == status_id)  # type: ignore
+
+        if priority_id:
+            query = query.filter(Task.priority_id == priority_id)  # type: ignore
+
+        if search and search.strip():
+            search_pattern = f"%{search.strip()}%"
+            query = query.filter(
+                or_(
+                    Task.title.ilike(search_pattern),  # type: ignore
+                    Task.description.ilike(search_pattern)  # type: ignore
+                )
+            )
+
+        tasks = query.order_by(Task.created_at.desc()).all()  # type: ignore
+        return TaskService._format_tasks_list(tasks, db)
 
     @staticmethod
     def get_task_by_id(task_id: Any, db: Session) -> TaskResponse:
@@ -177,50 +254,54 @@ class TaskService:
         return TaskService._format_task_response(task, db)
 
     @staticmethod
+    def _format_tasks_list(tasks: List[Any], db: Session) -> List[TaskResponse]:
+        """Batch-loads all LOVs, Projects, and User names to format TaskResponse list with zero N+1 queries."""
+        if not tasks:
+            return []
+
+        project_ids = {t.project_id for t in tasks if t.project_id}
+        status_ids = {t.status_id for t in tasks if t.status_id}
+        priority_ids = {t.priority_id for t in tasks if t.priority_id}
+        task_type_ids = {t.task_type_id for t in tasks if t.task_type_id}
+        user_ids = ({t.assignee_id for t in tasks if t.assignee_id} | 
+                    {t.created_by for t in tasks if t.created_by})
+
+        projects = {p.project_id: p.project_name for p in db.query(Project).filter(Project.project_id.in_(project_ids)).all()} if project_ids else {}
+        statuses = {s.status_id: s.status_name for s in db.query(Status).filter(Status.status_id.in_(status_ids)).all()} if status_ids else {}
+        priorities = {p.priority_id: p.priority_name for p in db.query(Priority).filter(Priority.priority_id.in_(priority_ids)).all()} if priority_ids else {}
+        task_types = {tt.task_type_id: tt.type_name for tt in db.query(TaskType).filter(TaskType.task_type_id.in_(task_type_ids)).all()} if task_type_ids else {}
+        users = {u.user_id: u.full_name for u in db.query(UserMaster).filter(UserMaster.user_id.in_(user_ids)).all()} if user_ids else {}
+
+        res = []
+        for task in tasks:
+            res.append(
+                TaskResponse(
+                    task_id=task.task_id,  # type: ignore
+                    project_id=task.project_id,  # type: ignore
+                    project_name=projects.get(task.project_id),
+                    title=task.title,  # type: ignore
+                    description=task.description,  # type: ignore
+                    status_id=task.status_id,  # type: ignore
+                    status_name=statuses.get(task.status_id),
+                    priority_id=task.priority_id,  # type: ignore
+                    priority_name=priorities.get(task.priority_id),
+                    task_type_id=task.task_type_id,  # type: ignore
+                    task_type_name=task_types.get(task.task_type_id),
+                    assignee_id=task.assignee_id,  # type: ignore
+                    assignee_name=users.get(task.assignee_id),
+                    created_by=task.created_by,  # type: ignore
+                    creator_name=users.get(task.created_by),
+                    created_by_name=users.get(task.created_by),
+                    due_date=task.due_date,  # type: ignore
+                    completed_at=task.completed_at,  # type: ignore
+                    is_active=task.is_active,  # type: ignore
+                    created_at=task.created_at,  # type: ignore
+                    updated_at=task.updated_at,  # type: ignore
+                )
+            )
+        return res
+
+    @staticmethod
     def _format_task_response(task: Any, db: Session) -> TaskResponse:
-        """Helper to format Task ORM model with populated LOV and User names."""
-        status_name = None
-        priority_name = None
-        task_type_name = None
-        assignee_name = None
-
-        if task.status_id:
-            st = db.query(Status).filter(Status.status_id == task.status_id).first()
-            if st:
-                status_name = st.status_name  # type: ignore
-
-        if task.priority_id:
-            pr = db.query(Priority).filter(Priority.priority_id == task.priority_id).first()
-            if pr:
-                priority_name = pr.priority_name  # type: ignore
-
-        if task.task_type_id:
-            tt = db.query(TaskType).filter(TaskType.task_type_id == task.task_type_id).first()
-            if tt:
-                task_type_name = tt.type_name  # type: ignore
-
-        if task.assignee_id:
-            usr = db.query(UserMaster).filter(UserMaster.user_id == task.assignee_id).first()
-            if usr:
-                assignee_name = usr.full_name  # type: ignore
-
-        return TaskResponse(
-            task_id=task.task_id,  # type: ignore
-            project_id=task.project_id,  # type: ignore
-            title=task.title,  # type: ignore
-            description=task.description,  # type: ignore
-            status_id=task.status_id,  # type: ignore
-            status_name=status_name,
-            priority_id=task.priority_id,  # type: ignore
-            priority_name=priority_name,
-            task_type_id=task.task_type_id,  # type: ignore
-            task_type_name=task_type_name,
-            assignee_id=task.assignee_id,  # type: ignore
-            assignee_name=assignee_name,
-            created_by=task.created_by,  # type: ignore
-            due_date=task.due_date,  # type: ignore
-            completed_at=task.completed_at,  # type: ignore
-            is_active=task.is_active,  # type: ignore
-            created_at=task.created_at,  # type: ignore
-            updated_at=task.updated_at,  # type: ignore
-        )
+        """Helper to format single Task ORM model."""
+        return TaskService._format_tasks_list([task], db)[0]

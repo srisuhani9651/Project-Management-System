@@ -35,6 +35,7 @@ class TaskResponse(BaseModel):
     """Schema for returning task details."""
     task_id: UUID
     project_id: UUID
+    project_name: Optional[str] = None
     title: str
     description: Optional[str] = None
     status_id: Optional[UUID] = None
@@ -46,6 +47,8 @@ class TaskResponse(BaseModel):
     assignee_id: Optional[UUID] = None
     assignee_name: Optional[str] = None
     created_by: Optional[UUID] = None
+    creator_name: Optional[str] = None
+    created_by_name: Optional[str] = None
     due_date: Optional[datetime] = None
     completed_at: Optional[datetime] = None
     is_active: bool
