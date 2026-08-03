@@ -154,16 +154,17 @@ def eval_task_view(user: UserMaster, task: Task, db: Session) -> bool:
     """
     Policy: Task View PBAC:
     - Project Owner: Can view all tasks in their projects.
-    - Non-owner Project Member: Can ONLY view tasks assigned to them.
+    - Non-owner Project Member: Can view tasks assigned to or created by them.
     """
     project = get_project(task.project_id, db)
     is_owner = str(project.created_by) == str(user.user_id)
     is_assignee = task.assignee_id and str(task.assignee_id) == str(user.user_id)
+    is_creator = task.created_by and str(task.created_by) == str(user.user_id)
 
-    if is_owner or is_assignee:
+    if is_owner or is_assignee or is_creator:
         return True
 
-    raise PBACAuthorizationError("Access denied: You can only view tasks assigned to you in this project.")
+    raise PBACAuthorizationError("Access denied: You can only view tasks assigned to you or created by you in this project.")
 
 
 def eval_task_create(user: UserMaster, project_id: UUID, db: Session) -> bool:
