@@ -6,7 +6,7 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/com
 import { ProjectForm } from "./ProjectForm"
 
 export function EditProjectModal({ open, onOpenChange, project, onProjectUpdated }) {
-  const { setProjects } = useProject()
+  const { fetchProjects } = useProject()
   const [isLoading, setIsLoading] = useState(false)
   const [serverError, setServerError] = useState("")
 
@@ -23,10 +23,10 @@ export function EditProjectModal({ open, onOpenChange, project, onProjectUpdated
       const res = await api.post(`/projects/${projectId}`, payload)
       const updatedProject = res.data.project || res.data
 
-      if (setProjects) {
-        setProjects((prev) =>
-          prev.map((p) => ((p.id === projectId || p.project_id === projectId) ? { ...p, ...updatedProject } : p))
-        )
+      // Refetch the canonical project list so display fields (name/status/priority/etc.)
+      // stay in sync everywhere (Projects page, Dashboard, ProjectCard) instead of going stale.
+      if (fetchProjects) {
+        fetchProjects()
       }
 
       if (onProjectUpdated) {

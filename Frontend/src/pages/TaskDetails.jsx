@@ -415,6 +415,7 @@ export function TaskDetails() {
     assignee_id: task.assignee_id,
     assignee: assigneeName,
     project_id: projectId,
+    project_owner_id: task.project_owner_id,
     projectName: projectName,
     dueDate: dueDateStr,
     due_date: task.due_date,

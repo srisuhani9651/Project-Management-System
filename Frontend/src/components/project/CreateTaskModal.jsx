@@ -22,7 +22,7 @@ export function CreateTaskModal({ open, onOpenChange, onCreateTask, projectId, p
       const res = await api.post("/tasks", payload)
       const createdTask = res.data.task || res.data
 
-      onCreateTask(createdTask)
+      if (onCreateTask) onCreateTask(createdTask)
       if (fetchProjects) fetchProjects()
       onOpenChange(false)
     } catch (err) {

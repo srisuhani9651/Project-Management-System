@@ -45,6 +45,24 @@ export function ProjectProvider({ children }) {
         return Boolean(isOwner || isAssignee)
       }
     }
+
+    if (resource === "project") {
+      if (action === "read" || action === "view") return true
+
+      const isOwner =
+        (resourceData?.created_by && String(resourceData.created_by) === userId) ||
+        (resourceData?.createdBy && String(resourceData.createdBy) === userId) ||
+        (resourceData?.ownerId && String(resourceData.ownerId) === userId)
+
+      if (action === "update" || action === "delete") {
+        // Fall back to allowed when ownership data isn't loaded yet, so buttons
+        // aren't wrongly disabled before the resource has finished fetching.
+        return resourceData?.created_by === undefined && resourceData?.createdBy === undefined && resourceData?.ownerId === undefined
+          ? true
+          : Boolean(isOwner)
+      }
+    }
+
     return true
   }
 

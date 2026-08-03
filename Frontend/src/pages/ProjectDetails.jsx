@@ -50,16 +50,22 @@ export function ProjectDetails() {
     title: t.title || t.name,
     description: t.description || "",
     priority: t.priority_name || t.priority || "Medium",
+    priority_id: t.priority_id || "",
     status: t.status_name || t.status || "To Do",
+    status_id: t.status_id || "",
+    task_type_id: t.task_type_id || "",
     dueDate: t.due_date
       ? new Date(t.due_date).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
       : t.dueDate || "No due date",
+    due_date: t.due_date || "",
+    completed_at: t.completed_at || "",
     assignee_id: t.assignee_id,
     assignee: t.assignee_name || t.assignee || "Unassigned",
     assigned_to: t.assignee_name || t.assignee || "Unassigned",
     created_by: t.created_by,
     creator_name: t.creator_name || t.created_by_name || "Owner",
     project_id: t.project_id || pObj?.id,
+    project_owner_id: pObj?.created_by || t.project_owner_id,
     projectKey: pObj?.key || "PROJ",
   }), [])
 
@@ -99,11 +105,23 @@ export function ProjectDetails() {
         project_id: projData.project_id || currentId,
         key: projData.project_name ? projData.project_name.substring(0, 3).toUpperCase() : "PROJ",
         name: projData.project_name || projData.name || "Untitled Project",
+        project_name: projData.project_name || projData.name || "Untitled Project",
         description: projData.project_description || projData.description || "No description provided.",
+        project_description: projData.project_description || "",
         category: projData.category_name || projData.category || "Development",
+        category_id: projData.category_id || "",
         status: projData.status_name || projData.status || "In Progress",
+        status_id: projData.status_id || "",
         priority: projData.priority_name || projData.priority || "Medium",
+        priority_id: projData.priority_id || "",
         projectType: projData.project_type_name || projData.projectType || "Team",
+        project_type_id: projData.project_type_id || "",
+        planned_start_date: projData.planned_start_date || "",
+        planned_end_date: projData.planned_end_date || "",
+        actual_start_date: projData.actual_start_date || "",
+        actual_end_date: projData.actual_end_date || "",
+        estimated_duration: projData.estimated_duration || "",
+        created_by: projData.created_by || "",
         createdAt: projData.created_at
           ? new Date(projData.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
           : "Aug 1, 2026",
@@ -291,8 +309,9 @@ export function ProjectDetails() {
       <ProjectHeader
         project={project}
         tasksCount={tasks.length}
-        onDelete={handleDeleteProject}
-        onEdit={() => setShowEditProjectModal(true)}
+        onDeleteProject={handleDeleteProject}
+        onEditProject={() => setShowEditProjectModal(true)}
+        onAddTask={() => setShowCreateTaskModal(true)}
       />
 
       {/* Segmented Pill Tabs Bar */}
