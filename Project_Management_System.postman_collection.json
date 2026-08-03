@@ -1,0 +1,3560 @@
+{
+  "info": {
+    "_postman_id": "b62d0cff-610c-491c-8532-83bc6c8cb4c2",
+    "name": "Project Management System API",
+    "description": "Postman collection for the Project Management System backend (FastAPI).\n\n**Getting started**\n1. Run **Authentication > Login User** (or **Register User** first) — the JWT is automatically saved into `{{jwt_token}}` and used as `Bearer` auth for every other request in this collection.\n2. Run **Projects > Create Project** — its id is saved into `{{project_id}}`.\n3. Run **Tasks > Create Task** and **Project Members > Add Members To Project** — their ids are saved into `{{task_id}}` and `{{member_id}}` respectively.\n\n**PBAC model** (enforced server-side, see request-level notes):\n- **Owner** (`project.created_by`): full control — update/delete the project, manage members, update/delete any task.\n- **Member** (active row in `project_members`, or auto-added via task assignment): can view the project, create tasks, and update tasks assigned to them.\n- **Assigned User**: can update or (if status is Todo) delete tasks assigned to them, even without being a full project member beforehand (assignment auto-grants membership).\n\nOnly endpoints that are actually implemented in the codebase are included — there is no standalone Analytics API (folded into Dashboard) and no standalone Notifications/Email API (email sending is an internal side-effect of the password-reset flow).",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{jwt_token}}",
+        "type": "string"
+      }
+    ]
+  },
+  "event": [],
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:8000",
+      "type": "string",
+      "description": "Base URL of the running FastAPI backend."
+    },
+    {
+      "key": "jwt_token",
+      "value": "",
+      "type": "string",
+      "description": "JWT access token. Auto-populated by Authentication > Login User (or Register User)."
+    },
+    {
+      "key": "project_id",
+      "value": "",
+      "type": "string",
+      "description": "Active project UUID. Auto-populated by Projects > Create Project."
+    },
+    {
+      "key": "task_id",
+      "value": "",
+      "type": "string",
+      "description": "Active task UUID. Auto-populated by Tasks > Create Task."
+    },
+    {
+      "key": "user_id",
+      "value": "",
+      "type": "string",
+      "description": "A user UUID (defaults to the logged-in user; also used as a member-to-add / assignee id)."
+    },
+    {
+      "key": "member_id",
+      "value": "",
+      "type": "string",
+      "description": "project_member_id of an existing project member. Auto-populated by Project Members > Add Members To Project."
+    },
+    {
+      "key": "reset_token",
+      "value": "",
+      "type": "string",
+      "description": "Short-lived password-reset token. Auto-populated by Password Reset (TOTP) > Verify Reset Code."
+    }
+  ],
+  "item": [
+    {
+      "name": "Authentication",
+      "description": "Account creation and session management. Login stores the JWT into `{{jwt_token}}` automatically so every other folder can run without manual setup.",
+      "item": [
+        {
+          "name": "Register User",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text",
+                "description": "Required for all requests that send a JSON request body."
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/auth/register",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "auth",
+                "register"
+              ]
+            },
+            "description": "**Use case:** Create a new user account.\n\nRegisters a new user, hashes the password (bcrypt), stores the record in `auth.user_master`, and immediately returns a JWT access token so the caller is logged in right after signup.\n\n**Password rules:** min 8 chars, at least one uppercase, one lowercase, one digit, and one special character from `!@#$%^&*`.\n\n**Access control:** Public / Unauthenticated.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"full_name\": \"Jane Doe\",\n  \"email\": \"jane.doe@example.com\",\n  \"username\": \"janedoe\",\n  \"password\": \"StrongPass1!\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "response": [
+            {
+              "name": "201 Created - Success",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text",
+                    "description": "Required for all requests that send a JSON request body."
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/auth/register",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "auth",
+                    "register"
+                  ]
+                },
+                "description": "**Use case:** Create a new user account.\n\nRegisters a new user, hashes the password (bcrypt), stores the record in `auth.user_master`, and immediately returns a JWT access token so the caller is logged in right after signup.\n\n**Password rules:** min 8 chars, at least one uppercase, one lowercase, one digit, and one special character from `!@#$%^&*`.\n\n**Access control:** Public / Unauthenticated.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"full_name\": \"Jane Doe\",\n  \"email\": \"jane.doe@example.com\",\n  \"username\": \"janedoe\",\n  \"password\": \"StrongPass1!\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "auth": {
+                  "type": "noauth"
+                }
+              },
+              "status": "Created",
+              "code": 201,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json",
+                  "type": "text",
+                  "description": ""
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"message\": \"User registered successfully\",\n  \"access_token\": \"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...\",\n  \"token_type\": \"bearer\",\n  \"user\": {\n    \"user_id\": \"3fa85f64-5717-4562-b3fc-2c963f66afa6\",\n    \"full_name\": \"Jane Doe\",\n    \"email\": \"jane.doe@example.com\",\n    \"username\": \"janedoe\",\n    \"created_at\": \"2026-08-03T10:15:00Z\"\n  }\n}"
+            },
+            {
+              "name": "400 Bad Request - Email already registered",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text",
+                    "description": "Required for all requests that send a JSON request body."
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/auth/register",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "auth",
+                    "register"
+                  ]
+                },
+                "description": "**Use case:** Create a new user account.\n\nRegisters a new user, hashes the password (bcrypt), stores the record in `auth.user_master`, and immediately returns a JWT access token so the caller is logged in right after signup.\n\n**Password rules:** min 8 chars, at least one uppercase, one lowercase, one digit, and one special character from `!@#$%^&*`.\n\n**Access control:** Public / Unauthenticated.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"full_name\": \"Jane Doe\",\n  \"email\": \"jane.doe@example.com\",\n  \"username\": \"janedoe\",\n  \"password\": \"StrongPass1!\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "auth": {
+                  "type": "noauth"
+                }
+              },
+              "status": "Bad Request",
+              "code": 400,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json",
+                  "type": "text",
+                  "description": ""
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"detail\": \"A user with this email already exists.\"\n}"
+            },
+            {
+              "name": "422 Unprocessable Entity - Weak password",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text",
+                    "description": "Required for all requests that send a JSON request body."
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/auth/register",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "auth",
+                    "register"
+                  ]
+                },
+                "description": "**Use case:** Create a new user account.\n\nRegisters a new user, hashes the password (bcrypt), stores the record in `auth.user_master`, and immediately returns a JWT access token so the caller is logged in right after signup.\n\n**Password rules:** min 8 chars, at least one uppercase, one lowercase, one digit, and one special character from `!@#$%^&*`.\n\n**Access control:** Public / Unauthenticated.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"full_name\": \"Jane Doe\",\n  \"email\": \"jane.doe@example.com\",\n  \"username\": \"janedoe\",\n  \"password\": \"StrongPass1!\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "auth": {
+                  "type": "noauth"
+                }
+              },
+              "status": "Unprocessable Entity",
+              "code": 422,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json",
+                  "type": "text",
+                  "description": ""
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"detail\": [\n    {\n      \"type\": \"value_error\",\n      \"loc\": [\n        \"body\",\n        \"password\"\n      ],\n      \"msg\": \"Value error, Password must contain at least one special character (!@#$%^&*)\"\n    }\n  ]\n}"
+            }
+          ],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "    const data = pm.response.json();",
+                  "    if (data.access_token) { pm.collectionVariables.set(\"jwt_token\", data.access_token); }",
+                  "    if (data.user && data.user.user_id) { pm.collectionVariables.set(\"user_id\", data.user.user_id); }",
+                  "}",
+                  "pm.test(\"Status code is 201\", function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Login User",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text",
+                "description": "Required for all requests that send a JSON request body."
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/auth/login",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            },
+            "description": "**Use case:** Authenticate an existing user with email + password and obtain a JWT access token used as `Bearer {{jwt_token}}` for every protected request in this collection.\n\n**Test script:** On a `200 OK` response this request automatically stores `access_token` into the collection variable `jwt_token` (and `user.user_id` into `user_id`), so every subsequent request in the collection is authenticated automatically.\n\n**Access control:** Public / Unauthenticated.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"jane.doe@example.com\",\n  \"password\": \"StrongPass1!\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "response": [
+            {
+              "name": "200 OK - Success",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text",
+                    "description": "Required for all requests that send a JSON request body."
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/auth/login",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "auth",
+                    "login"
+                  ]
+                },
+                "description": "**Use case:** Authenticate an existing user with email + password and obtain a JWT access token used as `Bearer {{jwt_token}}` for every protected request in this collection.\n\n**Test script:** On a `200 OK` response this request automatically stores `access_token` into the collection variable `jwt_token` (and `user.user_id` into `user_id`), so every subsequent request in the collection is authenticated automatically.\n\n**Access control:** Public / Unauthenticated.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"email\": \"jane.doe@example.com\",\n  \"password\": \"StrongPass1!\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "auth": {
+                  "type": "noauth"
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json",
+                  "type": "text",
+                  "description": ""
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"message\": \"Login successful\",\n  \"access_token\": \"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...\",\n  \"token_type\": \"bearer\",\n  \"user\": {\n    \"user_id\": \"3fa85f64-5717-4562-b3fc-2c963f66afa6\",\n    \"full_name\": \"Jane Doe\",\n    \"email\": \"jane.doe@example.com\",\n    \"username\": \"janedoe\",\n    \"created_at\": \"2026-08-03T10:15:00Z\"\n  }\n}"
+            },
+            {
+              "name": "401 Unauthorized - Invalid credentials",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text",
+                    "description": "Required for all requests that send a JSON request body."
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/auth/login",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "auth",
+                    "login"
+                  ]
+                },
+                "description": "**Use case:** Authenticate an existing user with email + password and obtain a JWT access token used as `Bearer {{jwt_token}}` for every protected request in this collection.\n\n**Test script:** On a `200 OK` response this request automatically stores `access_token` into the collection variable `jwt_token` (and `user.user_id` into `user_id`), so every subsequent request in the collection is authenticated automatically.\n\n**Access control:** Public / Unauthenticated.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"email\": \"jane.doe@example.com\",\n  \"password\": \"StrongPass1!\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "auth": {
+                  "type": "noauth"
+                }
+              },
+              "status": "Unauthorized",
+              "code": 401,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json",
+                  "type": "text",
+                  "description": ""
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"detail\": \"Invalid email or password.\"\n}"
+            }
+          ],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Response contains access_token\", function () {",
+                  "    pm.expect(pm.response.json()).to.have.property(\"access_token\");",
+                  "});",
+                  "",
+                  "if (pm.response.code === 200) {",
+                  "    const data = pm.response.json();",
+                  "    if (data.access_token) {",
+                  "        pm.collectionVariables.set(\"jwt_token\", data.access_token);",
+                  "        console.log(\"Saved jwt_token to collection variables.\");",
+                  "    }",
+                  "    if (data.user && data.user.user_id) {",
+                  "        pm.collectionVariables.set(\"user_id\", data.user.user_id);",
+                  "    }",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Logout User",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/auth/logout",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "auth",
+                "logout"
+              ]
+            },
+            "description": "**Use case:** Logs out the currently authenticated user. The backend is stateless (JWT based), so this mainly signals the client to discard its stored token; the frontend also clears `pf_token` / `pf_user` from local storage.\n\n**Access control:** Authenticated (any logged-in user)."
+          },
+          "response": [
+            {
+              "name": "200 OK - Success",
+              "originalRequest": {
+                "method": "POST",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/auth/logout",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "auth",
+                    "logout"
+                  ]
+                },
+                "description": "**Use case:** Logs out the currently authenticated user. The backend is stateless (JWT based), so this mainly signals the client to discard its stored token; the frontend also clears `pf_token` / `pf_user` from local storage.\n\n**Access control:** Authenticated (any logged-in user)."
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json",
+                  "type": "text",
+                  "description": ""
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"message\": \"Successfully logged out\"\n}"
+            },
+            {
+              "name": "401 Unauthorized - Missing/invalid token",
+              "originalRequest": {
+                "method": "POST",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/auth/logout",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "auth",
+                    "logout"
+                  ]
+                },
+                "description": "**Use case:** Logs out the currently authenticated user. The backend is stateless (JWT based), so this mainly signals the client to discard its stored token; the frontend also clears `pf_token` / `pf_user` from local storage.\n\n**Access control:** Authenticated (any logged-in user)."
+              },
+              "status": "Unauthorized",
+              "code": 401,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json",
+                  "type": "text",
+                  "description": ""
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"detail\": \"Could not validate credentials\"\n}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Users",
+      "description": "Authenticated-user self-service: view and update your own profile/account settings.",
+      "item": [
+        {
+          "name": "Get Current User Profile",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/auth/me",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "auth",
+                "me"
+              ]
+            },
+            "description": "**Use case:** Fetch the profile of the currently authenticated user (used to populate the app's profile/settings screen).\n\n**Access control:** Authenticated (any logged-in user); always returns only the caller's own profile."
+          },
+          "response": [
+            {
+              "name": "200 OK - Success",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/auth/me",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "auth",
+                    "me"
+                  ]
+                },
+                "description": "**Use case:** Fetch the profile of the currently authenticated user (used to populate the app's profile/settings screen).\n\n**Access control:** Authenticated (any logged-in user); always returns only the caller's own profile."
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json",
+                  "type": "text",
+                  "description": ""
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"user_id\": \"3fa85f64-5717-4562-b3fc-2c963f66afa6\",\n  \"full_name\": \"Jane Doe\",\n  \"email\": \"jane.doe@example.com\",\n  \"username\": \"janedoe\",\n  \"created_at\": \"2026-08-03T10:15:00Z\"\n}"
+            },
+            {
+              "name": "401 Unauthorized - Missing/invalid token",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/auth/me",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "auth",
+                    "me"
+                  ]
+                },
+                "description": "**Use case:** Fetch the profile of the currently authenticated user (used to populate the app's profile/settings screen).\n\n**Access control:** Authenticated (any logged-in user); always returns only the caller's own profile."
+              },
+              "status": "Unauthorized",
+              "code": 401,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json",
+                  "type": "text",
+                  "description": ""
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"detail\": \"Could not validate credentials\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Update User Settings",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text",
+                "description": "Required for all requests that send a JSON request body."
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/auth/settings",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "auth",
+                "settings"
+              ]
+            },
+            "description": "**Use case:** Update the caller's own display name / preferred username, and optionally change their password in the same call.\n\n`current_password` is required whenever `new_password` is supplied, and is verified against the stored hash before the password is changed.\n\n**Access control:** Authenticated (any logged-in user); can only update their own account.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"full_name\": \"Jane A. Doe\",\n  \"username\": \"jane_d\",\n  \"current_password\": \"StrongPass1!\",\n  \"new_password\": \"EvenStronger2!\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [
+            {
+              "name": "200 OK - Success",
+              "originalRequest": {
+                "method": "PUT",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text",
+                    "description": "Required for all requests that send a JSON request body."
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/auth/settings",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "auth",
+                    "settings"
+                  ]
+                },
+                "description": "**Use case:** Update the caller's own display name / preferred username, and optionally change their password in the same call.\n\n`current_password` is required whenever `new_password` is supplied, and is verified against the stored hash before the password is changed.\n\n**Access control:** Authenticated (any logged-in user); can only update their own account.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"full_name\": \"Jane A. Doe\",\n  \"username\": \"jane_d\",\n  \"current_password\": \"StrongPass1!\",\n  \"new_password\": \"EvenStronger2!\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json",
+                  "type": "text",
+                  "description": ""
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"message\": \"Settings updated successfully\",\n  \"user\": {\n    \"user_id\": \"3fa85f64-5717-4562-b3fc-2c963f66afa6\",\n    \"full_name\": \"Jane A. Doe\",\n    \"email\": \"jane.doe@example.com\",\n    \"username\": \"jane_d\",\n    \"created_at\": \"2026-08-03T10:15:00Z\"\n  }\n}"
+            },
+            {
+              "name": "400 Bad Request - Wrong current password",
+              "originalRequest": {
+                "method": "PUT",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text",
+                    "description": "Required for all requests that send a JSON request body."
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/auth/settings",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "auth",
+                    "settings"
+                  ]
+                },
+                "description": "**Use case:** Update the caller's own display name / preferred username, and optionally change their password in the same call.\n\n`current_password` is required whenever `new_password` is supplied, and is verified against the stored hash before the password is changed.\n\n**Access control:** Authenticated (any logged-in user); can only update their own account.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"full_name\": \"Jane A. Doe\",\n  \"username\": \"jane_d\",\n  \"current_password\": \"StrongPass1!\",\n  \"new_password\": \"EvenStronger2!\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "Bad Request",
+              "code": 400,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json",
+                  "type": "text",
+                  "description": ""
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"detail\": \"Current password is incorrect.\"\n}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Password Reset (TOTP)",
+      "description": "3-step, stateless, TOTP-based password reset flow (request code -> verify code -> set new password). No reset tokens are ever stored in the database.",
+      "item": [
+        {
+          "name": "Forgot Password - Request Reset Code",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text",
+                "description": "Required for all requests that send a JSON request body."
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/auth/forgot-password",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "auth",
+                "forgot-password"
+              ]
+            },
+            "description": "**Use case:** Step 1 of the password-reset flow. Generates a stateless 6-digit TOTP code (valid for a ~30 second window), derived via HMAC from `user_id + current password hash + server secret` — **never persisted to the database** — and emails it to the user via SMTP.\n\nAlways returns the same generic message regardless of whether the email exists, to avoid leaking account existence.\n\n**Access control:** Public / Unauthenticated.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"jane.doe@example.com\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "response": [
+            {
+              "name": "200 OK - Code sent (or email not found)",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text",
+                    "description": "Required for all requests that send a JSON request body."
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/auth/forgot-password",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "auth",
+                    "forgot-password"
+                  ]
+                },
+                "description": "**Use case:** Step 1 of the password-reset flow. Generates a stateless 6-digit TOTP code (valid for a ~30 second window), derived via HMAC from `user_id + current password hash + server secret` — **never persisted to the database** — and emails it to the user via SMTP.\n\nAlways returns the same generic message regardless of whether the email exists, to avoid leaking account existence.\n\n**Access control:** Public / Unauthenticated.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"email\": \"jane.doe@example.com\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "auth": {
+                  "type": "noauth"
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json",
+                  "type": "text",
+                  "description": ""
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"message\": \"If an account exists for this email, a 6-digit reset code has been sent.\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Verify Reset Code",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text",
+                "description": "Required for all requests that send a JSON request body."
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/auth/verify-reset-code",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "auth",
+                "verify-reset-code"
+              ]
+            },
+            "description": "**Use case:** Step 2 of the password-reset flow. Verifies the 6-digit TOTP code against the current +/- 30 second window and, if valid, issues a short-lived signed `reset_token` used to authorize the actual password change in Step 3.\n\nThis request automatically stores the returned `reset_token` into the collection variable `{{reset_token}}` for the next request.\n\n**Access control:** Public / Unauthenticated.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"jane.doe@example.com\",\n  \"code\": \"123456\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "response": [
+            {
+              "name": "200 OK - Code valid",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text",
+                    "description": "Required for all requests that send a JSON request body."
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/auth/verify-reset-code",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "auth",
+                    "verify-reset-code"
+                  ]
+                },
+                "description": "**Use case:** Step 2 of the password-reset flow. Verifies the 6-digit TOTP code against the current +/- 30 second window and, if valid, issues a short-lived signed `reset_token` used to authorize the actual password change in Step 3.\n\nThis request automatically stores the returned `reset_token` into the collection variable `{{reset_token}}` for the next request.\n\n**Access control:** Public / Unauthenticated.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"email\": \"jane.doe@example.com\",\n  \"code\": \"123456\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "auth": {
+                  "type": "noauth"
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json",
+                  "type": "text",
+                  "description": ""
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"message\": \"Code verified successfully.\",\n  \"reset_token\": \"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.reset...\"\n}"
+            },
+            {
+              "name": "400 Bad Request - Invalid/expired code",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text",
+                    "description": "Required for all requests that send a JSON request body."
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/auth/verify-reset-code",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "auth",
+                    "verify-reset-code"
+                  ]
+                },
+                "description": "**Use case:** Step 2 of the password-reset flow. Verifies the 6-digit TOTP code against the current +/- 30 second window and, if valid, issues a short-lived signed `reset_token` used to authorize the actual password change in Step 3.\n\nThis request automatically stores the returned `reset_token` into the collection variable `{{reset_token}}` for the next request.\n\n**Access control:** Public / Unauthenticated.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"email\": \"jane.doe@example.com\",\n  \"code\": \"123456\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "auth": {
+                  "type": "noauth"
+                }
+              },
+              "status": "Bad Request",
+              "code": 400,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json",
+                  "type": "text",
+                  "description": ""
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"detail\": \"Invalid or expired reset code.\"\n}"
+            }
+          ],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const data = pm.response.json();",
+                  "    if (data.reset_token) { pm.collectionVariables.set(\"reset_token\", data.reset_token); }",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Reset Password",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text",
+                "description": "Required for all requests that send a JSON request body."
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/auth/reset-password",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "auth",
+                "reset-password"
+              ]
+            },
+            "description": "**Use case:** Step 3 of the password-reset flow. Validates the short-lived `reset_token` issued by *Verify Reset Code* and sets the new password (subject to the same strength rules as registration).\n\n**Access control:** Public / Unauthenticated (authorization is via the signed `reset_token`, not a login session).",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"jane.doe@example.com\",\n  \"reset_token\": \"{{reset_token}}\",\n  \"new_password\": \"BrandNewPass3!\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "response": [
+            {
+              "name": "200 OK - Password reset",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text",
+                    "description": "Required for all requests that send a JSON request body."
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/auth/reset-password",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "auth",
+                    "reset-password"
+                  ]
+                },
+                "description": "**Use case:** Step 3 of the password-reset flow. Validates the short-lived `reset_token` issued by *Verify Reset Code* and sets the new password (subject to the same strength rules as registration).\n\n**Access control:** Public / Unauthenticated (authorization is via the signed `reset_token`, not a login session).",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"email\": \"jane.doe@example.com\",\n  \"reset_token\": \"{{reset_token}}\",\n  \"new_password\": \"BrandNewPass3!\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "auth": {
+                  "type": "noauth"
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json",
+                  "type": "text",
+                  "description": ""
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"message\": \"Password has been reset successfully. You can now log in with your new password.\"\n}"
+            },
+            {
+              "name": "400 Bad Request - Invalid/expired reset token",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text",
+                    "description": "Required for all requests that send a JSON request body."
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/auth/reset-password",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "auth",
+                    "reset-password"
+                  ]
+                },
+                "description": "**Use case:** Step 3 of the password-reset flow. Validates the short-lived `reset_token` issued by *Verify Reset Code* and sets the new password (subject to the same strength rules as registration).\n\n**Access control:** Public / Unauthenticated (authorization is via the signed `reset_token`, not a login session).",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"email\": \"jane.doe@example.com\",\n  \"reset_token\": \"{{reset_token}}\",\n  \"new_password\": \"BrandNewPass3!\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "auth": {
+                  "type": "noauth"
+                }
+              },
+              "status": "Bad Request",
+              "code": 400,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json",
+                  "type": "text",
+                  "description": ""
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"detail\": \"Invalid or expired reset token.\"\n}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Projects",
+      "description": "Full project lifecycle: LOV lookups, create, list, view, update, and soft-delete. Includes both the direct `/projects` routes and the equivalent unified `/api/manage/project` routes.",
+      "item": [
+        {
+          "name": "Get Project LOV Options",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/projects/lov",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "projects",
+                "lov"
+              ]
+            },
+            "description": "**Use case:** Fetches the List-of-Values dropdown options (statuses, priorities, project types, categories, task types) needed to populate the Create/Edit Project and Create/Edit Task forms.\n\n**Access control:** Authenticated (any logged-in user)."
+          },
+          "response": [
+            {
+              "name": "200 OK - Success",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/projects/lov",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "projects",
+                    "lov"
+                  ]
+                },
+                "description": "**Use case:** Fetches the List-of-Values dropdown options (statuses, priorities, project types, categories, task types) needed to populate the Create/Edit Project and Create/Edit Task forms.\n\n**Access control:** Authenticated (any logged-in user)."
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json",
+                  "type": "text",
+                  "description": ""
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"statuses\": [\n    {\n      \"id\": \"6f9619ff-8b86-d011-b42d-00cf4fc964ff\",\n      \"name\": \"To Do\"\n    }\n  ],\n  \"priorities\": [\n    {\n      \"id\": \"7f9619ff-8b86-d011-b42d-00cf4fc964ff\",\n      \"name\": \"High\"\n    }\n  ],\n  \"project_types\": [\n    {\n      \"id\": \"8f9619ff-8b86-d011-b42d-00cf4fc964ff\",\n      \"name\": \"Team\"\n    }\n  ],\n  \"categories\": [\n    {\n      \"id\": \"9f9619ff-8b86-d011-b42d-00cf4fc964ff\",\n      \"name\": \"Development\"\n    }\n  ],\n  \"task_types\": [\n    {\n      \"id\": \"af9619ff-8b86-d011-b42d-00cf4fc964ff\",\n      \"name\": \"Feature\"\n    }\n  ]\n}"
+            }
+          ]
+        },
+        {
+          "name": "Create Project",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text",
+                "description": "Required for all requests that send a JSON request body."
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/projects",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "projects"
+              ]
+            },
+            "description": "**Use case:** Creates a new project owned by the caller. Replace the sample LOV ids below with real ones from **Get Project LOV Options** before sending.\n\nThe response's `project.project_id` is automatically saved into the collection variable `{{project_id}}` for use by every other Projects/Tasks/Members request.\n\n**Access control:** Authenticated (any logged-in user). The creator automatically becomes the project **Owner**.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"project_name\": \"Q4 Strategic Rebranding\",\n  \"project_description\": \"Refresh brand identity and marketing site ahead of Q4 launch.\",\n  \"status_id\": \"6f9619ff-8b86-d011-b42d-00cf4fc964ff\",\n  \"priority_id\": \"7f9619ff-8b86-d011-b42d-00cf4fc964ff\",\n  \"project_type_id\": \"8f9619ff-8b86-d011-b42d-00cf4fc964ff\",\n  \"category_id\": \"9f9619ff-8b86-d011-b42d-00cf4fc964ff\",\n  \"planned_start_date\": \"2026-08-01T00:00:00Z\",\n  \"planned_end_date\": \"2026-08-31T00:00:00Z\",\n  \"estimated_duration\": 30\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [
+            {
+              "name": "201 Created - Success",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text",
+                    "description": "Required for all requests that send a JSON request body."
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/projects",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "projects"
+                  ]
+                },
+                "description": "**Use case:** Creates a new project owned by the caller. Replace the sample LOV ids below with real ones from **Get Project LOV Options** before sending.\n\nThe response's `project.project_id` is automatically saved into the collection variable `{{project_id}}` for use by every other Projects/Tasks/Members request.\n\n**Access control:** Authenticated (any logged-in user). The creator automatically becomes the project **Owner**.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"project_name\": \"Q4 Strategic Rebranding\",\n  \"project_description\": \"Refresh brand identity and marketing site ahead of Q4 launch.\",\n  \"status_id\": \"6f9619ff-8b86-d011-b42d-00cf4fc964ff\",\n  \"priority_id\": \"7f9619ff-8b86-d011-b42d-00cf4fc964ff\",\n  \"project_type_id\": \"8f9619ff-8b86-d011-b42d-00cf4fc964ff\",\n  \"category_id\": \"9f9619ff-8b86-d011-b42d-00cf4fc964ff\",\n  \"planned_start_date\": \"2026-08-01T00:00:00Z\",\n  \"planned_end_date\": \"2026-08-31T00:00:00Z\",\n  \"estimated_duration\": 30\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "Created",
+              "code": 201,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json",
+                  "type": "text",
+                  "description": ""
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"message\": \"Project created successfully\",\n  \"project\": {\n    \"project_id\": \"1b2c3d4e-5f60-7182-93a4-b5c6d7e8f9a0\",\n    \"project_name\": \"Q4 Strategic Rebranding\",\n    \"project_description\": \"Refresh brand identity and marketing site ahead of Q4 launch.\",\n    \"status_id\": \"6f9619ff-8b86-d011-b42d-00cf4fc964ff\",\n    \"status_name\": \"To Do\",\n    \"priority_id\": \"7f9619ff-8b86-d011-b42d-00cf4fc964ff\",\n    \"priority_name\": \"High\",\n    \"project_type_id\": \"8f9619ff-8b86-d011-b42d-00cf4fc964ff\",\n    \"project_type_name\": \"Team\",\n    \"category_id\": \"9f9619ff-8b86-d011-b42d-00cf4fc964ff\",\n    \"category_name\": \"Development\",\n    \"planned_start_date\": \"2026-08-01T00:00:00Z\",\n    \"planned_end_date\": \"2026-08-31T00:00:00Z\",\n    \"actual_start_date\": null,\n    \"actual_end_date\": null,\n    \"estimated_duration\": 30,\n    \"total_tasks\": 0,\n    \"completed_tasks\": 0,\n    \"pending_tasks\": 0,\n    \"progress\": 0,\n    \"created_by\": \"3fa85f64-5717-4562-b3fc-2c963f66afa6\",\n    \"is_active\": true,\n    \"created_at\": \"2026-08-03T10:20:00Z\",\n    \"updated_at\": \"2026-08-03T10:20:00Z\"\n  }\n}"
+            },
+            {
+              "name": "400 Bad Request - Duplicate project name",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text",
+                    "description": "Required for all requests that send a JSON request body."
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/projects",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "projects"
+                  ]
+                },
+                "description": "**Use case:** Creates a new project owned by the caller. Replace the sample LOV ids below with real ones from **Get Project LOV Options** before sending.\n\nThe response's `project.project_id` is automatically saved into the collection variable `{{project_id}}` for use by every other Projects/Tasks/Members request.\n\n**Access control:** Authenticated (any logged-in user). The creator automatically becomes the project **Owner**.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"project_name\": \"Q4 Strategic Rebranding\",\n  \"project_description\": \"Refresh brand identity and marketing site ahead of Q4 launch.\",\n  \"status_id\": \"6f9619ff-8b86-d011-b42d-00cf4fc964ff\",\n  \"priority_id\": \"7f9619ff-8b86-d011-b42d-00cf4fc964ff\",\n  \"project_type_id\": \"8f9619ff-8b86-d011-b42d-00cf4fc964ff\",\n  \"category_id\": \"9f9619ff-8b86-d011-b42d-00cf4fc964ff\",\n  \"planned_start_date\": \"2026-08-01T00:00:00Z\",\n  \"planned_end_date\": \"2026-08-31T00:00:00Z\",\n  \"estimated_duration\": 30\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "Bad Request",
+              "code": 400,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json",
+                  "type": "text",
+                  "description": ""
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"detail\": \"A project with this name already exists.\"\n}"
+            }
+          ],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 201\", function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "if (pm.response.code === 201) {",
+                  "    const data = pm.response.json();",
+                  "    if (data.project && data.project.project_id) {",
+                  "        pm.collectionVariables.set(\"project_id\", data.project.project_id);",
+                  "    }",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "List My Projects",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/projects",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "projects"
+              ]
+            },
+            "description": "**Use case:** Lists every active project the caller can see: projects they own **plus** projects where they are an active member.\n\n**Access control:** Authenticated (any logged-in user); results are automatically scoped to the caller (PBAC-filtered at the query level, no separate check needed)."
+          },
+          "response": [
+            {
+              "name": "200 OK - Success",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/projects",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "projects"
+                  ]
+                },
+                "description": "**Use case:** Lists every active project the caller can see: projects they own **plus** projects where they are an active member.\n\n**Access control:** Authenticated (any logged-in user); results are automatically scoped to the caller (PBAC-filtered at the query level, no separate check needed)."
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json",
+                  "type": "text",
+                  "description": ""
+                }
+              ],
+              "cookie": [],
+              "body": "[\n  {\n    \"project_id\": \"1b2c3d4e-5f60-7182-93a4-b5c6d7e8f9a0\",\n    \"project_name\": \"Q4 Strategic Rebranding\",\n    \"status_name\": \"In Progress\",\n    \"priority_name\": \"High\",\n    \"total_tasks\": 12,\n    \"completed_tasks\": 5,\n    \"pending_tasks\": 7,\n    \"progress\": 42,\n    \"created_by\": \"3fa85f64-5717-4562-b3fc-2c963f66afa6\",\n    \"is_active\": true\n  }\n]"
+            }
+          ]
+        },
+        {
+          "name": "Get Project By ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/projects/{{project_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "projects",
+                "{{project_id}}"
+              ]
+            },
+            "description": "**Use case:** Fetches full details plus dynamically computed task telemetry (`total_tasks`, `completed_tasks`, `pending_tasks`, `progress`) for a single project.\n\n**PBAC:** `project:view` — caller must be the project **Owner** or an active **Member** (including users auto-added by task assignment). Returns `403` otherwise."
+          },
+          "response": [
+            {
+              "name": "200 OK - Success",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/projects/{{project_id}}",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "projects",
+                    "{{project_id}}"
+                  ]
+                },
+                "description": "**Use case:** Fetches full details plus dynamically computed task telemetry (`total_tasks`, `completed_tasks`, `pending_tasks`, `progress`) for a single project.\n\n**PBAC:** `project:view` — caller must be the project **Owner** or an active **Member** (including users auto-added by task assignment). Returns `403` otherwise."
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json",
+                  "type": "text",
+                  "description": ""
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"project_id\": \"1b2c3d4e-5f60-7182-93a4-b5c6d7e8f9a0\",\n  \"project_name\": \"Q4 Strategic Rebranding\",\n  \"project_description\": \"Refresh brand identity and marketing site ahead of Q4 launch.\",\n  \"status_name\": \"In Progress\",\n  \"priority_name\": \"High\",\n  \"project_type_name\": \"Team\",\n  \"category_name\": \"Development\",\n  \"planned_start_date\": \"2026-08-01T00:00:00Z\",\n  \"planned_end_date\": \"2026-08-31T00:00:00Z\",\n  \"total_tasks\": 12,\n  \"completed_tasks\": 5,\n  \"pending_tasks\": 7,\n  \"progress\": 42,\n  \"created_by\": \"3fa85f64-5717-4562-b3fc-2c963f66afa6\",\n  \"is_active\": true\n}"
+            },
+            {
+              "name": "403 Forbidden - Not a project member",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/projects/{{project_id}}",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "projects",
+                    "{{project_id}}"
+                  ]
+                },
+                "description": "**Use case:** Fetches full details plus dynamically computed task telemetry (`total_tasks`, `completed_tasks`, `pending_tasks`, `progress`) for a single project.\n\n**PBAC:** `project:view` — caller must be the project **Owner** or an active **Member** (including users auto-added by task assignment). Returns `403` otherwise."
+              },
+              "status": "Forbidden",
+              "code": 403,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json",
+                  "type": "text",
+                  "description": ""
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"detail\": \"Access denied: Only project members can view this project.\"\n}"
+            },
+            {
+              "name": "404 Not Found",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/projects/{{project_id}}",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "projects",
+                    "{{project_id}}"
+                  ]
+                },
+                "description": "**Use case:** Fetches full details plus dynamically computed task telemetry (`total_tasks`, `completed_tasks`, `pending_tasks`, `progress`) for a single project.\n\n**PBAC:** `project:view` — caller must be the project **Owner** or an active **Member** (including users auto-added by task assignment). Returns `403` otherwise."
+              },
+              "status": "Not Found",
+              "code": 404,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json",
+                  "type": "text",
+                  "description": ""
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"detail\": \"Project with ID '1b2c3d4e-5f60-7182-93a4-b5c6d7e8f9a0' not found.\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Update Project",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text",
+                "description": "Required for all requests that send a JSON request body."
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/projects/{{project_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "projects",
+                "{{project_id}}"
+              ]
+            },
+            "description": "**Use case:** Edits project details (name, description, LOV selections, timeline dates, estimated duration). Only fields supplied in the body are changed (partial update).\n\n**PBAC:** `project:update` — caller must be the project **Owner**. Returns `403` for anyone else, including regular Members.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"project_name\": \"Q4 Strategic Rebranding (Revised)\",\n  \"project_description\": \"Updated scope after stakeholder review.\",\n  \"status_id\": \"6f9619ff-8b86-d011-b42d-00cf4fc964ff\",\n  \"priority_id\": \"7f9619ff-8b86-d011-b42d-00cf4fc964ff\",\n  \"planned_end_date\": \"2026-09-15T00:00:00Z\",\n  \"estimated_duration\": 45\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [
+            {
+              "name": "200 OK - Success",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text",
+                    "description": "Required for all requests that send a JSON request body."
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/projects/{{project_id}}",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "projects",
+                    "{{project_id}}"
+                  ]
+                },
+                "description": "**Use case:** Edits project details (name, description, LOV selections, timeline dates, estimated duration). Only fields supplied in the body are changed (partial update).\n\n**PBAC:** `project:update` — caller must be the project **Owner**. Returns `403` for anyone else, including regular Members.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"project_name\": \"Q4 Strategic Rebranding (Revised)\",\n  \"project_description\": \"Updated scope after stakeholder review.\",\n  \"status_id\": \"6f9619ff-8b86-d011-b42d-00cf4fc964ff\",\n  \"priority_id\": \"7f9619ff-8b86-d011-b42d-00cf4fc964ff\",\n  \"planned_end_date\": \"2026-09-15T00:00:00Z\",\n  \"estimated_duration\": 45\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json",
+                  "type": "text",
+                  "description": ""
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"message\": \"Project updated successfully\",\n  \"project\": {\n    \"project_id\": \"1b2c3d4e-5f60-7182-93a4-b5c6d7e8f9a0\",\n    \"project_name\": \"Q4 Strategic Rebranding (Revised)\",\n    \"status_name\": \"To Do\",\n    \"priority_name\": \"High\",\n    \"planned_end_date\": \"2026-09-15T00:00:00Z\",\n    \"estimated_duration\": 45,\n    \"progress\": 42,\n    \"is_active\": true\n  }\n}"
+            },
+            {
+              "name": "403 Forbidden - Not the project owner",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text",
+                    "description": "Required for all requests that send a JSON request body."
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/projects/{{project_id}}",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "projects",
+                    "{{project_id}}"
+                  ]
+                },
+                "description": "**Use case:** Edits project details (name, description, LOV selections, timeline dates, estimated duration). Only fields supplied in the body are changed (partial update).\n\n**PBAC:** `project:update` — caller must be the project **Owner**. Returns `403` for anyone else, including regular Members.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"project_name\": \"Q4 Strategic Rebranding (Revised)\",\n  \"project_description\": \"Updated scope after stakeholder review.\",\n  \"status_id\": \"6f9619ff-8b86-d011-b42d-00cf4fc964ff\",\n  \"priority_id\": \"7f9619ff-8b86-d011-b42d-00cf4fc964ff\",\n  \"planned_end_date\": \"2026-09-15T00:00:00Z\",\n  \"estimated_duration\": 45\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "Forbidden",
+              "code": 403,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json",
+                  "type": "text",
+                  "description": ""
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"detail\": \"Access denied: Only the project owner can update this project.\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Delete Project",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/projects/{{project_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "projects",
+                "{{project_id}}"
+              ]
+            },
+            "description": "**Use case:** Soft-deletes a project (`is_active = false`); the project and its task telemetry disappear from list/detail endpoints but the row is retained.\n\n**PBAC:** `project:delete` — caller must be the project **Owner**. Returns `403` for anyone else."
+          },
+          "response": [
+            {
+              "name": "200 OK - Success",
+              "originalRequest": {
+                "method": "DELETE",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/projects/{{project_id}}",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "projects",
+                    "{{project_id}}"
+                  ]
+                },
+                "description": "**Use case:** Soft-deletes a project (`is_active = false`); the project and its task telemetry disappear from list/detail endpoints but the row is retained.\n\n**PBAC:** `project:delete` — caller must be the project **Owner**. Returns `403` for anyone else."
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json",
+                  "type": "text",
+                  "description": ""
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"message\": \"Project '1b2c3d4e-5f60-7182-93a4-b5c6d7e8f9a0' deleted successfully\"\n}"
+            },
+            {
+              "name": "403 Forbidden - Not the project owner",
+              "originalRequest": {
+                "method": "DELETE",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/projects/{{project_id}}",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "projects",
+                    "{{project_id}}"
+                  ]
+                },
+                "description": "**Use case:** Soft-deletes a project (`is_active = false`); the project and its task telemetry disappear from list/detail endpoints but the row is retained.\n\n**PBAC:** `project:delete` — caller must be the project **Owner**. Returns `403` for anyone else."
+              },
+              "status": "Forbidden",
+              "code": 403,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json",
+                  "type": "text",
+                  "description": ""
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"detail\": \"Access denied: Only the project owner can delete this project.\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Create Project (Unified Manage API)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text",
+                "description": "Required for all requests that send a JSON request body."
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/manage/project",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "manage",
+                "project"
+              ]
+            },
+            "description": "**Use case:** Alternate/unified creation endpoint that differentiates entity type via the `{entity_type}` path segment (`project` or `task`). Functionally identical to **Create Project**; provided for clients that prefer one generic `/api/manage/{entity_type}` surface for both Projects and Tasks.\n\n**Access control:** Authenticated (any logged-in user).",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"project_name\": \"Q4 Strategic Rebranding\",\n  \"project_description\": \"Refresh brand identity and marketing site ahead of Q4 launch.\",\n  \"status_id\": \"6f9619ff-8b86-d011-b42d-00cf4fc964ff\",\n  \"priority_id\": \"7f9619ff-8b86-d011-b42d-00cf4fc964ff\",\n  \"project_type_id\": \"8f9619ff-8b86-d011-b42d-00cf4fc964ff\",\n  \"category_id\": \"9f9619ff-8b86-d011-b42d-00cf4fc964ff\",\n  \"planned_start_date\": \"2026-08-01T00:00:00Z\",\n  \"planned_end_date\": \"2026-08-31T00:00:00Z\",\n  \"estimated_duration\": 30\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [
+            {
+              "name": "201 Created - Success",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text",
+                    "description": "Required for all requests that send a JSON request body."
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/manage/project",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "manage",
+                    "project"
+                  ]
+                },
+                "description": "**Use case:** Alternate/unified creation endpoint that differentiates entity type via the `{entity_type}` path segment (`project` or `task`). Functionally identical to **Create Project**; provided for clients that prefer one generic `/api/manage/{entity_type}` surface for both Projects and Tasks.\n\n**Access control:** Authenticated (any logged-in user).",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"project_name\": \"Q4 Strategic Rebranding\",\n  \"project_description\": \"Refresh brand identity and marketing site ahead of Q4 launch.\",\n  \"status_id\": \"6f9619ff-8b86-d011-b42d-00cf4fc964ff\",\n  \"priority_id\": \"7f9619ff-8b86-d011-b42d-00cf4fc964ff\",\n  \"project_type_id\": \"8f9619ff-8b86-d011-b42d-00cf4fc964ff\",\n  \"category_id\": \"9f9619ff-8b86-d011-b42d-00cf4fc964ff\",\n  \"planned_start_date\": \"2026-08-01T00:00:00Z\",\n  \"planned_end_date\": \"2026-08-31T00:00:00Z\",\n  \"estimated_duration\": 30\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "Created",
+              "code": 201,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json",
+                  "type": "text",
+                  "description": ""
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"message\": \"Project created successfully\",\n  \"project\": {\n    \"project_id\": \"2c3d4e5f-6071-8293-a4b5-c6d7e8f9a0b1\",\n    \"project_name\": \"Q4 Strategic Rebranding\",\n    \"is_active\": true\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "Update Project (Unified Manage API)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text",
+                "description": "Required for all requests that send a JSON request body."
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/manage/project/{{project_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "manage",
+                "project",
+                "{{project_id}}"
+              ]
+            },
+            "description": "**Use case:** Alternate/unified update endpoint (`POST /api/manage/{entity_type}/{entity_id}`). Functionally identical to **Update Project**.\n\n**PBAC:** `project:update` — caller must be the project **Owner**.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"project_name\": \"Q4 Strategic Rebranding (Revised)\",\n  \"estimated_duration\": 45\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [
+            {
+              "name": "200 OK - Success",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text",
+                    "description": "Required for all requests that send a JSON request body."
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/manage/project/{{project_id}}",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "manage",
+                    "project",
+                    "{{project_id}}"
+                  ]
+                },
+                "description": "**Use case:** Alternate/unified update endpoint (`POST /api/manage/{entity_type}/{entity_id}`). Functionally identical to **Update Project**.\n\n**PBAC:** `project:update` — caller must be the project **Owner**.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"project_name\": \"Q4 Strategic Rebranding (Revised)\",\n  \"estimated_duration\": 45\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json",
+                  "type": "text",
+                  "description": ""
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"message\": \"Project updated successfully\",\n  \"project\": {\n    \"project_id\": \"1b2c3d4e-5f60-7182-93a4-b5c6d7e8f9a0\",\n    \"project_name\": \"Q4 Strategic Rebranding (Revised)\"\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "Delete Project (Unified Manage API)",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/manage/project/{{project_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "manage",
+                "project",
+                "{{project_id}}"
+              ]
+            },
+            "description": "**Use case:** Alternate/unified delete endpoint (`DELETE /api/manage/{entity_type}/{entity_id}`). Functionally identical to **Delete Project**.\n\n**PBAC:** `project:delete` — caller must be the project **Owner**."
+          },
+          "response": [
+            {
+              "name": "200 OK - Success",
+              "originalRequest": {
+                "method": "DELETE",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/api/manage/project/{{project_id}}",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "manage",
+                    "project",
+                    "{{project_id}}"
+                  ]
+                },
+                "description": "**Use case:** Alternate/unified delete endpoint (`DELETE /api/manage/{entity_type}/{entity_id}`). Functionally identical to **Delete Project**.\n\n**PBAC:** `project:delete` — caller must be the project **Owner**."
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json",
+                  "type": "text",
+                  "description": ""
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"message\": \"Project '1b2c3d4e-5f60-7182-93a4-b5c6d7e8f9a0' deleted successfully\"\n}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Project Members",
+      "description": "Manage who belongs to a project: browse addable users, list current members, add members in bulk, and remove an existing member (Owner-only; the Owner cannot be removed).",
+      "item": [
+        {
+          "name": "Get Users Dropdown",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/members/users?project_id={{project_id}}&exclude_project_members=true",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "members",
+                "users"
+              ],
+              "query": [
+                {
+                  "key": "project_id",
+                  "value": "{{project_id}}",
+                  "description": "Optional. Scopes exclusion to this project."
+                },
+                {
+                  "key": "exclude_project_members",
+                  "value": "true",
+                  "description": "Optional (default false). Excludes existing active members & the owner."
+                },
+                {
+                  "key": "exclude_user_id",
+                  "value": "{{user_id}}",
+                  "description": "Optional. Excludes a specific user (e.g. yourself).",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": "**Use case:** Returns all users as `{value, label}` pairs for the *Add Members* picker. When `project_id` + `exclude_project_members=true` are supplied, users who are already active members (or the owner) of that project are filtered out at the database level so only addable users are returned.\n\n**Access control:** Authenticated (any logged-in user)."
+          },
+          "response": [
+            {
+              "name": "200 OK - Success",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/api/members/users?project_id={{project_id}}&exclude_project_members=true",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "members",
+                    "users"
+                  ],
+                  "query": [
+                    {
+                      "key": "project_id",
+                      "value": "{{project_id}}",
+                      "description": "Optional. Scopes exclusion to this project."
+                    },
+                    {
+                      "key": "exclude_project_members",
+                      "value": "true",
+                      "description": "Optional (default false). Excludes existing active members & the owner."
+                    },
+                    {
+                      "key": "exclude_user_id",
+                      "value": "{{user_id}}",
+                      "description": "Optional. Excludes a specific user (e.g. yourself).",
+                      "disabled": true
+                    }
+                  ]
+                },
+                "description": "**Use case:** Returns all users as `{value, label}` pairs for the *Add Members* picker. When `project_id` + `exclude_project_members=true` are supplied, users who are already active members (or the owner) of that project are filtered out at the database level so only addable users are returned.\n\n**Access control:** Authenticated (any logged-in user)."
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json",
+                  "type": "text",
+                  "description": ""
+                }
+              ],
+              "cookie": [],
+              "body": "[\n  {\n    \"value\": \"4a5b6c7d-8e9f-0102-b3c4-d5e6f7a8b9c0\",\n    \"label\": \"John Smith\"\n  },\n  {\n    \"value\": \"5b6c7d8e-9f01-0203-c4d5-e6f7a8b9c0d1\",\n    \"label\": \"Alice Ray\"\n  }\n]"
+            }
+          ]
+        },
+        {
+          "name": "Get Project Members",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/members/{{project_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "members",
+                "{{project_id}}"
+              ],
+              "query": [
+                {
+                  "key": "exclude_user_id",
+                  "value": "{{user_id}}",
+                  "description": "Optional. Excludes a specific user from the results.",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": "**Use case:** Lists all active members of a project, including the project **Owner** (synthesized into the list even if they have no explicit `project_members` row).\n\n**PBAC:** `project:view` — caller must be the project **Owner** or an active **Member**."
+          },
+          "response": [
+            {
+              "name": "200 OK - Success",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/api/members/{{project_id}}",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "members",
+                    "{{project_id}}"
+                  ],
+                  "query": [
+                    {
+                      "key": "exclude_user_id",
+                      "value": "{{user_id}}",
+                      "description": "Optional. Excludes a specific user from the results.",
+                      "disabled": true
+                    }
+                  ]
+                },
+                "description": "**Use case:** Lists all active members of a project, including the project **Owner** (synthesized into the list even if they have no explicit `project_members` row).\n\n**PBAC:** `project:view` — caller must be the project **Owner** or an active **Member**."
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json",
+                  "type": "text",
+                  "description": ""
+                }
+              ],
+              "cookie": [],
+              "body": "[\n  {\n    \"project_member_id\": \"1b2c3d4e-5f60-7182-93a4-b5c6d7e8f9a0\",\n    \"project_id\": \"1b2c3d4e-5f60-7182-93a4-b5c6d7e8f9a0\",\n    \"user_id\": \"3fa85f64-5717-4562-b3fc-2c963f66afa6\",\n    \"full_name\": \"Jane Doe\",\n    \"email\": \"jane.doe@example.com\",\n    \"joined_at\": null,\n    \"is_active\": true\n  },\n  {\n    \"project_member_id\": \"6c7d8e9f-0102-1314-d5e6-f7a8b9c0d1e2\",\n    \"project_id\": \"1b2c3d4e-5f60-7182-93a4-b5c6d7e8f9a0\",\n    \"user_id\": \"4a5b6c7d-8e9f-0102-b3c4-d5e6f7a8b9c0\",\n    \"full_name\": \"John Smith\",\n    \"email\": \"john.smith@example.com\",\n    \"joined_at\": \"2026-08-03T11:00:00Z\",\n    \"is_active\": true\n  }\n]"
+            },
+            {
+              "name": "403 Forbidden - Not a project member",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/api/members/{{project_id}}",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "members",
+                    "{{project_id}}"
+                  ],
+                  "query": [
+                    {
+                      "key": "exclude_user_id",
+                      "value": "{{user_id}}",
+                      "description": "Optional. Excludes a specific user from the results.",
+                      "disabled": true
+                    }
+                  ]
+                },
+                "description": "**Use case:** Lists all active members of a project, including the project **Owner** (synthesized into the list even if they have no explicit `project_members` row).\n\n**PBAC:** `project:view` — caller must be the project **Owner** or an active **Member**."
+              },
+              "status": "Forbidden",
+              "code": 403,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json",
+                  "type": "text",
+                  "description": ""
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"detail\": \"Access denied: Only project members can view this project.\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Add Members To Project",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text",
+                "description": "Required for all requests that send a JSON request body."
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/members",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "members"
+              ]
+            },
+            "description": "**Use case:** Adds one or more users as active members of a project in a single call. Users who are already active members are silently skipped (counted, not errored).\n\nThis request automatically saves the first newly-added member's `project_member_id` into the collection variable `{{member_id}}`, ready for the **Remove Project Member** request.\n\n**PBAC:** `project:update` — caller must be the project **Owner**.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"project_id\": \"{{project_id}}\",\n  \"user_ids\": [\n    \"{{user_id}}\"\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [
+            {
+              "name": "201 Created - Success",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text",
+                    "description": "Required for all requests that send a JSON request body."
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/members",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "members"
+                  ]
+                },
+                "description": "**Use case:** Adds one or more users as active members of a project in a single call. Users who are already active members are silently skipped (counted, not errored).\n\nThis request automatically saves the first newly-added member's `project_member_id` into the collection variable `{{member_id}}`, ready for the **Remove Project Member** request.\n\n**PBAC:** `project:update` — caller must be the project **Owner**.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"project_id\": \"{{project_id}}\",\n  \"user_ids\": [\n    \"{{user_id}}\"\n  ]\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "Created",
+              "code": 201,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json",
+                  "type": "text",
+                  "description": ""
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"message\": \"1 member(s) added, 0 duplicate(s) skipped.\",\n  \"added\": 1,\n  \"skipped\": 0,\n  \"members\": [\n    {\n      \"project_member_id\": \"6c7d8e9f-0102-1314-d5e6-f7a8b9c0d1e2\",\n      \"project_id\": \"1b2c3d4e-5f60-7182-93a4-b5c6d7e8f9a0\",\n      \"user_id\": \"4a5b6c7d-8e9f-0102-b3c4-d5e6f7a8b9c0\",\n      \"full_name\": \"John Smith\",\n      \"email\": \"john.smith@example.com\",\n      \"is_active\": true\n    }\n  ]\n}"
+            },
+            {
+              "name": "403 Forbidden - Not the project owner",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text",
+                    "description": "Required for all requests that send a JSON request body."
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/members",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "members"
+                  ]
+                },
+                "description": "**Use case:** Adds one or more users as active members of a project in a single call. Users who are already active members are silently skipped (counted, not errored).\n\nThis request automatically saves the first newly-added member's `project_member_id` into the collection variable `{{member_id}}`, ready for the **Remove Project Member** request.\n\n**PBAC:** `project:update` — caller must be the project **Owner**.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"project_id\": \"{{project_id}}\",\n  \"user_ids\": [\n    \"{{user_id}}\"\n  ]\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "Forbidden",
+              "code": 403,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json",
+                  "type": "text",
+                  "description": ""
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"detail\": \"Access denied: Only the project owner can update this project.\"\n}"
+            }
+          ],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 201\", function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "if (pm.response.code === 201) {",
+                  "    const data = pm.response.json();",
+                  "    if (data.members && data.members.length > 0) {",
+                  "        pm.collectionVariables.set(\"member_id\", data.members[0].project_member_id);",
+                  "    }",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Remove Project Member",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/members/{{member_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "members",
+                "{{member_id}}"
+              ]
+            },
+            "description": "**Use case:** Removes (deactivates) a member from a project. The project **Owner** can never be removed via this endpoint — attempting to do so returns `400`.\n\n**PBAC:** `project:update` — caller must be the project **Owner**."
+          },
+          "response": [
+            {
+              "name": "200 OK - Success",
+              "originalRequest": {
+                "method": "DELETE",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/api/members/{{member_id}}",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "members",
+                    "{{member_id}}"
+                  ]
+                },
+                "description": "**Use case:** Removes (deactivates) a member from a project. The project **Owner** can never be removed via this endpoint — attempting to do so returns `400`.\n\n**PBAC:** `project:update` — caller must be the project **Owner**."
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json",
+                  "type": "text",
+                  "description": ""
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"message\": \"Member removed successfully.\",\n  \"project_member_id\": \"6c7d8e9f-0102-1314-d5e6-f7a8b9c0d1e2\"\n}"
+            },
+            {
+              "name": "400 Bad Request - Cannot remove the owner",
+              "originalRequest": {
+                "method": "DELETE",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/api/members/{{member_id}}",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "members",
+                    "{{member_id}}"
+                  ]
+                },
+                "description": "**Use case:** Removes (deactivates) a member from a project. The project **Owner** can never be removed via this endpoint — attempting to do so returns `400`.\n\n**PBAC:** `project:update` — caller must be the project **Owner**."
+              },
+              "status": "Bad Request",
+              "code": 400,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json",
+                  "type": "text",
+                  "description": ""
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"detail\": \"The project owner cannot be removed from the project.\"\n}"
+            },
+            {
+              "name": "403 Forbidden - Not the project owner",
+              "originalRequest": {
+                "method": "DELETE",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/api/members/{{member_id}}",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "members",
+                    "{{member_id}}"
+                  ]
+                },
+                "description": "**Use case:** Removes (deactivates) a member from a project. The project **Owner** can never be removed via this endpoint — attempting to do so returns `400`.\n\n**PBAC:** `project:update` — caller must be the project **Owner**."
+              },
+              "status": "Forbidden",
+              "code": 403,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json",
+                  "type": "text",
+                  "description": ""
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"detail\": \"Access denied: Only the project owner can update this project.\"\n}"
+            },
+            {
+              "name": "404 Not Found",
+              "originalRequest": {
+                "method": "DELETE",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/api/members/{{member_id}}",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "members",
+                    "{{member_id}}"
+                  ]
+                },
+                "description": "**Use case:** Removes (deactivates) a member from a project. The project **Owner** can never be removed via this endpoint — attempting to do so returns `400`.\n\n**PBAC:** `project:update` — caller must be the project **Owner**."
+              },
+              "status": "Not Found",
+              "code": 404,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json",
+                  "type": "text",
+                  "description": ""
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"detail\": \"Project member with ID '6c7d8e9f-0102-1314-d5e6-f7a8b9c0d1e2' not found.\"\n}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Tasks",
+      "description": "Full task lifecycle scoped to a project: create, list/filter, view, update (incl. completion rules), and soft-delete. Includes both the direct `/tasks` routes and the equivalent unified `/api/manage/task` routes.",
+      "item": [
+        {
+          "name": "Create Task",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text",
+                "description": "Required for all requests that send a JSON request body."
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/tasks",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "tasks"
+              ]
+            },
+            "description": "**Use case:** Creates a new task under a project. Replace the sample LOV ids below with real ones from **Get Project LOV Options** before sending.\n\nThe response's `task.task_id` is automatically saved into the collection variable `{{task_id}}` for use by every other Tasks request.\n\n**PBAC:** `task:create` — caller must be an active **Member** (or **Owner**) of the target project.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"project_id\": \"{{project_id}}\",\n  \"title\": \"Design new landing page hero section\",\n  \"description\": \"Explore 3 hero layout concepts aligned with the refreshed brand identity.\",\n  \"status_id\": \"6f9619ff-8b86-d011-b42d-00cf4fc964ff\",\n  \"priority_id\": \"7f9619ff-8b86-d011-b42d-00cf4fc964ff\",\n  \"task_type_id\": \"af9619ff-8b86-d011-b42d-00cf4fc964ff\",\n  \"assignee_id\": \"{{user_id}}\",\n  \"due_date\": \"2026-08-20T00:00:00Z\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [
+            {
+              "name": "201 Created - Success",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text",
+                    "description": "Required for all requests that send a JSON request body."
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/tasks",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "tasks"
+                  ]
+                },
+                "description": "**Use case:** Creates a new task under a project. Replace the sample LOV ids below with real ones from **Get Project LOV Options** before sending.\n\nThe response's `task.task_id` is automatically saved into the collection variable `{{task_id}}` for use by every other Tasks request.\n\n**PBAC:** `task:create` — caller must be an active **Member** (or **Owner**) of the target project.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"project_id\": \"{{project_id}}\",\n  \"title\": \"Design new landing page hero section\",\n  \"description\": \"Explore 3 hero layout concepts aligned with the refreshed brand identity.\",\n  \"status_id\": \"6f9619ff-8b86-d011-b42d-00cf4fc964ff\",\n  \"priority_id\": \"7f9619ff-8b86-d011-b42d-00cf4fc964ff\",\n  \"task_type_id\": \"af9619ff-8b86-d011-b42d-00cf4fc964ff\",\n  \"assignee_id\": \"{{user_id}}\",\n  \"due_date\": \"2026-08-20T00:00:00Z\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "Created",
+              "code": 201,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json",
+                  "type": "text",
+                  "description": ""
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"message\": \"Task created successfully\",\n  \"task\": {\n    \"task_id\": \"7d8e9f01-0213-2425-e6f7-a8b9c0d1e2f3\",\n    \"project_id\": \"1b2c3d4e-5f60-7182-93a4-b5c6d7e8f9a0\",\n    \"project_name\": \"Q4 Strategic Rebranding\",\n    \"title\": \"Design new landing page hero section\",\n    \"status_name\": \"To Do\",\n    \"priority_name\": \"High\",\n    \"task_type_name\": \"Feature\",\n    \"assignee_id\": \"4a5b6c7d-8e9f-0102-b3c4-d5e6f7a8b9c0\",\n    \"assignee_name\": \"John Smith\",\n    \"due_date\": \"2026-08-20T00:00:00Z\",\n    \"completed_at\": null,\n    \"is_active\": true,\n    \"created_at\": \"2026-08-03T11:10:00Z\"\n  }\n}"
+            },
+            {
+              "name": "403 Forbidden - Not a project member",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text",
+                    "description": "Required for all requests that send a JSON request body."
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/tasks",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "tasks"
+                  ]
+                },
+                "description": "**Use case:** Creates a new task under a project. Replace the sample LOV ids below with real ones from **Get Project LOV Options** before sending.\n\nThe response's `task.task_id` is automatically saved into the collection variable `{{task_id}}` for use by every other Tasks request.\n\n**PBAC:** `task:create` — caller must be an active **Member** (or **Owner**) of the target project.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"project_id\": \"{{project_id}}\",\n  \"title\": \"Design new landing page hero section\",\n  \"description\": \"Explore 3 hero layout concepts aligned with the refreshed brand identity.\",\n  \"status_id\": \"6f9619ff-8b86-d011-b42d-00cf4fc964ff\",\n  \"priority_id\": \"7f9619ff-8b86-d011-b42d-00cf4fc964ff\",\n  \"task_type_id\": \"af9619ff-8b86-d011-b42d-00cf4fc964ff\",\n  \"assignee_id\": \"{{user_id}}\",\n  \"due_date\": \"2026-08-20T00:00:00Z\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "Forbidden",
+              "code": 403,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json",
+                  "type": "text",
+                  "description": ""
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"detail\": \"Access denied: Only project members can create tasks in this project.\"\n}"
+            }
+          ],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 201\", function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "if (pm.response.code === 201) {",
+                  "    const data = pm.response.json();",
+                  "    if (data.task && data.task.task_id) {",
+                  "        pm.collectionVariables.set(\"task_id\", data.task.task_id);",
+                  "    }",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "List Tasks",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/tasks?project_id={{project_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "tasks"
+              ],
+              "query": [
+                {
+                  "key": "project_id",
+                  "value": "{{project_id}}",
+                  "description": "Optional. Filter by project."
+                },
+                {
+                  "key": "assignee_id",
+                  "value": "{{user_id}}",
+                  "description": "Optional. Filter by assignee.",
+                  "disabled": true
+                },
+                {
+                  "key": "status_id",
+                  "value": "",
+                  "description": "Optional. Filter by status LOV id.",
+                  "disabled": true
+                },
+                {
+                  "key": "priority_id",
+                  "value": "",
+                  "description": "Optional. Filter by priority LOV id.",
+                  "disabled": true
+                },
+                {
+                  "key": "search",
+                  "value": "",
+                  "description": "Optional. Free-text search on title/description.",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": "**Use case:** Lists tasks visible to the caller. All filters are optional and combinable; when `project_id` is supplied the caller must have view access to that project.\n\n**PBAC:** Results are always scoped to what the caller is authorized to see; `project:view` is additionally enforced when `project_id` is provided."
+          },
+          "response": [
+            {
+              "name": "200 OK - Success",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/tasks?project_id={{project_id}}",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "tasks"
+                  ],
+                  "query": [
+                    {
+                      "key": "project_id",
+                      "value": "{{project_id}}",
+                      "description": "Optional. Filter by project."
+                    },
+                    {
+                      "key": "assignee_id",
+                      "value": "{{user_id}}",
+                      "description": "Optional. Filter by assignee.",
+                      "disabled": true
+                    },
+                    {
+                      "key": "status_id",
+                      "value": "",
+                      "description": "Optional. Filter by status LOV id.",
+                      "disabled": true
+                    },
+                    {
+                      "key": "priority_id",
+                      "value": "",
+                      "description": "Optional. Filter by priority LOV id.",
+                      "disabled": true
+                    },
+                    {
+                      "key": "search",
+                      "value": "",
+                      "description": "Optional. Free-text search on title/description.",
+                      "disabled": true
+                    }
+                  ]
+                },
+                "description": "**Use case:** Lists tasks visible to the caller. All filters are optional and combinable; when `project_id` is supplied the caller must have view access to that project.\n\n**PBAC:** Results are always scoped to what the caller is authorized to see; `project:view` is additionally enforced when `project_id` is provided."
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json",
+                  "type": "text",
+                  "description": ""
+                }
+              ],
+              "cookie": [],
+              "body": "[\n  {\n    \"task_id\": \"7d8e9f01-0213-2425-e6f7-a8b9c0d1e2f3\",\n    \"project_id\": \"1b2c3d4e-5f60-7182-93a4-b5c6d7e8f9a0\",\n    \"title\": \"Design new landing page hero section\",\n    \"status_name\": \"To Do\",\n    \"priority_name\": \"High\",\n    \"assignee_name\": \"John Smith\",\n    \"due_date\": \"2026-08-20T00:00:00Z\",\n    \"is_active\": true\n  }\n]"
+            }
+          ]
+        },
+        {
+          "name": "Get Task By ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/tasks/{{task_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "tasks",
+                "{{task_id}}"
+              ]
+            },
+            "description": "**Use case:** Fetches full details for a single task.\n\n**PBAC:** `task:view` — caller must be an active **Member** (or **Owner**) of the task's project."
+          },
+          "response": [
+            {
+              "name": "200 OK - Success",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/tasks/{{task_id}}",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "tasks",
+                    "{{task_id}}"
+                  ]
+                },
+                "description": "**Use case:** Fetches full details for a single task.\n\n**PBAC:** `task:view` — caller must be an active **Member** (or **Owner**) of the task's project."
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json",
+                  "type": "text",
+                  "description": ""
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"task_id\": \"7d8e9f01-0213-2425-e6f7-a8b9c0d1e2f3\",\n  \"project_id\": \"1b2c3d4e-5f60-7182-93a4-b5c6d7e8f9a0\",\n  \"title\": \"Design new landing page hero section\",\n  \"description\": \"Explore 3 hero layout concepts aligned with the refreshed brand identity.\",\n  \"status_name\": \"To Do\",\n  \"priority_name\": \"High\",\n  \"assignee_name\": \"John Smith\",\n  \"due_date\": \"2026-08-20T00:00:00Z\",\n  \"completed_at\": null,\n  \"is_active\": true\n}"
+            },
+            {
+              "name": "403 Forbidden - Not a project member",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/tasks/{{task_id}}",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "tasks",
+                    "{{task_id}}"
+                  ]
+                },
+                "description": "**Use case:** Fetches full details for a single task.\n\n**PBAC:** `task:view` — caller must be an active **Member** (or **Owner**) of the task's project."
+              },
+              "status": "Forbidden",
+              "code": 403,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json",
+                  "type": "text",
+                  "description": ""
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"detail\": \"Access denied: Only project members can view tasks in this project.\"\n}"
+            },
+            {
+              "name": "404 Not Found",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/tasks/{{task_id}}",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "tasks",
+                    "{{task_id}}"
+                  ]
+                },
+                "description": "**Use case:** Fetches full details for a single task.\n\n**PBAC:** `task:view` — caller must be an active **Member** (or **Owner**) of the task's project."
+              },
+              "status": "Not Found",
+              "code": 404,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json",
+                  "type": "text",
+                  "description": ""
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"detail\": \"Task with ID '7d8e9f01-0213-2425-e6f7-a8b9c0d1e2f3' not found.\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Update Task",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text",
+                "description": "Required for all requests that send a JSON request body."
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/tasks/{{task_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "tasks",
+                "{{task_id}}"
+              ]
+            },
+            "description": "**Use case:** Edits task fields, reassigns the task, changes status, or marks it complete (partial update — only supplied fields change).\n\n**PBAC:**\n- `task:update` — the project **Owner** can update any task; a regular **Member** can only update tasks **assigned to them**.\n- `task:complete` — additionally enforced whenever the update sets a completed/done `status_id` or a `completed_at` value: the task must already have an `assignee_id` and all required fields (`title`, `description`, `project_id`, `status_id`, `priority_id`, `task_type_id`, `due_date`) must be non-empty.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status_id\": \"6f9619ff-8b86-d011-b42d-00cf4fc964ff\",\n  \"description\": \"Updated after design review feedback.\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [
+            {
+              "name": "200 OK - Success",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text",
+                    "description": "Required for all requests that send a JSON request body."
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/tasks/{{task_id}}",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "tasks",
+                    "{{task_id}}"
+                  ]
+                },
+                "description": "**Use case:** Edits task fields, reassigns the task, changes status, or marks it complete (partial update — only supplied fields change).\n\n**PBAC:**\n- `task:update` — the project **Owner** can update any task; a regular **Member** can only update tasks **assigned to them**.\n- `task:complete` — additionally enforced whenever the update sets a completed/done `status_id` or a `completed_at` value: the task must already have an `assignee_id` and all required fields (`title`, `description`, `project_id`, `status_id`, `priority_id`, `task_type_id`, `due_date`) must be non-empty.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"status_id\": \"6f9619ff-8b86-d011-b42d-00cf4fc964ff\",\n  \"description\": \"Updated after design review feedback.\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json",
+                  "type": "text",
+                  "description": ""
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"message\": \"Task updated successfully\",\n  \"task\": {\n    \"task_id\": \"7d8e9f01-0213-2425-e6f7-a8b9c0d1e2f3\",\n    \"title\": \"Design new landing page hero section\",\n    \"status_name\": \"In Progress\",\n    \"description\": \"Updated after design review feedback.\",\n    \"is_active\": true\n  }\n}"
+            },
+            {
+              "name": "403 Forbidden - Not owner/assignee",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text",
+                    "description": "Required for all requests that send a JSON request body."
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/tasks/{{task_id}}",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "tasks",
+                    "{{task_id}}"
+                  ]
+                },
+                "description": "**Use case:** Edits task fields, reassigns the task, changes status, or marks it complete (partial update — only supplied fields change).\n\n**PBAC:**\n- `task:update` — the project **Owner** can update any task; a regular **Member** can only update tasks **assigned to them**.\n- `task:complete` — additionally enforced whenever the update sets a completed/done `status_id` or a `completed_at` value: the task must already have an `assignee_id` and all required fields (`title`, `description`, `project_id`, `status_id`, `priority_id`, `task_type_id`, `due_date`) must be non-empty.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"status_id\": \"6f9619ff-8b86-d011-b42d-00cf4fc964ff\",\n  \"description\": \"Updated after design review feedback.\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "Forbidden",
+              "code": 403,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json",
+                  "type": "text",
+                  "description": ""
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"detail\": \"Access denied: You can only edit or update tasks assigned to you.\"\n}"
+            },
+            {
+              "name": "403 Forbidden - Cannot complete (missing fields)",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text",
+                    "description": "Required for all requests that send a JSON request body."
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/tasks/{{task_id}}",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "tasks",
+                    "{{task_id}}"
+                  ]
+                },
+                "description": "**Use case:** Edits task fields, reassigns the task, changes status, or marks it complete (partial update — only supplied fields change).\n\n**PBAC:**\n- `task:update` — the project **Owner** can update any task; a regular **Member** can only update tasks **assigned to them**.\n- `task:complete` — additionally enforced whenever the update sets a completed/done `status_id` or a `completed_at` value: the task must already have an `assignee_id` and all required fields (`title`, `description`, `project_id`, `status_id`, `priority_id`, `task_type_id`, `due_date`) must be non-empty.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"status_id\": \"6f9619ff-8b86-d011-b42d-00cf4fc964ff\",\n  \"description\": \"Updated after design review feedback.\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "Forbidden",
+              "code": 403,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json",
+                  "type": "text",
+                  "description": ""
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"detail\": \"Access denied: Task cannot be completed because required fields are incomplete or missing: due_date.\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Delete Task",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/tasks/{{task_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "tasks",
+                "{{task_id}}"
+              ]
+            },
+            "description": "**Use case:** Soft-deletes a task (`is_active = false`).\n\n**PBAC:** `task:delete` — caller must be the project **Owner** or the task **Assignee**, **and** the task's current status must be `Todo` / `To Do`."
+          },
+          "response": [
+            {
+              "name": "200 OK - Success",
+              "originalRequest": {
+                "method": "DELETE",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/tasks/{{task_id}}",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "tasks",
+                    "{{task_id}}"
+                  ]
+                },
+                "description": "**Use case:** Soft-deletes a task (`is_active = false`).\n\n**PBAC:** `task:delete` — caller must be the project **Owner** or the task **Assignee**, **and** the task's current status must be `Todo` / `To Do`."
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json",
+                  "type": "text",
+                  "description": ""
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"message\": \"Task '7d8e9f01-0213-2425-e6f7-a8b9c0d1e2f3' deleted successfully\"\n}"
+            },
+            {
+              "name": "403 Forbidden - Status is not Todo",
+              "originalRequest": {
+                "method": "DELETE",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/tasks/{{task_id}}",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "tasks",
+                    "{{task_id}}"
+                  ]
+                },
+                "description": "**Use case:** Soft-deletes a task (`is_active = false`).\n\n**PBAC:** `task:delete` — caller must be the project **Owner** or the task **Assignee**, **and** the task's current status must be `Todo` / `To Do`."
+              },
+              "status": "Forbidden",
+              "code": 403,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json",
+                  "type": "text",
+                  "description": ""
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"detail\": \"Access denied: Tasks can only be deleted if status is 'Todo'. Current status is 'In Progress'.\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Create Task (Unified Manage API)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text",
+                "description": "Required for all requests that send a JSON request body."
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/manage/task",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "manage",
+                "task"
+              ]
+            },
+            "description": "**Use case:** Alternate/unified creation endpoint (`POST /api/manage/{entity_type}` with `entity_type=task`). Functionally identical to **Create Task**.\n\n**PBAC:** `task:create` — caller must be an active **Member** (or **Owner**) of the target project.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"project_id\": \"{{project_id}}\",\n  \"title\": \"Design new landing page hero section\",\n  \"description\": \"Explore 3 hero layout concepts aligned with the refreshed brand identity.\",\n  \"status_id\": \"6f9619ff-8b86-d011-b42d-00cf4fc964ff\",\n  \"priority_id\": \"7f9619ff-8b86-d011-b42d-00cf4fc964ff\",\n  \"task_type_id\": \"af9619ff-8b86-d011-b42d-00cf4fc964ff\",\n  \"assignee_id\": \"{{user_id}}\",\n  \"due_date\": \"2026-08-20T00:00:00Z\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [
+            {
+              "name": "201 Created - Success",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text",
+                    "description": "Required for all requests that send a JSON request body."
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/manage/task",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "manage",
+                    "task"
+                  ]
+                },
+                "description": "**Use case:** Alternate/unified creation endpoint (`POST /api/manage/{entity_type}` with `entity_type=task`). Functionally identical to **Create Task**.\n\n**PBAC:** `task:create` — caller must be an active **Member** (or **Owner**) of the target project.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"project_id\": \"{{project_id}}\",\n  \"title\": \"Design new landing page hero section\",\n  \"description\": \"Explore 3 hero layout concepts aligned with the refreshed brand identity.\",\n  \"status_id\": \"6f9619ff-8b86-d011-b42d-00cf4fc964ff\",\n  \"priority_id\": \"7f9619ff-8b86-d011-b42d-00cf4fc964ff\",\n  \"task_type_id\": \"af9619ff-8b86-d011-b42d-00cf4fc964ff\",\n  \"assignee_id\": \"{{user_id}}\",\n  \"due_date\": \"2026-08-20T00:00:00Z\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "Created",
+              "code": 201,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json",
+                  "type": "text",
+                  "description": ""
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"message\": \"Task created successfully\",\n  \"task\": {\n    \"task_id\": \"8e9f0102-1324-3536-f7a8-b9c0d1e2f3a4\",\n    \"title\": \"Design new landing page hero section\"\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "Update Task (Unified Manage API)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text",
+                "description": "Required for all requests that send a JSON request body."
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/manage/task/{{task_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "manage",
+                "task",
+                "{{task_id}}"
+              ]
+            },
+            "description": "**Use case:** Alternate/unified update endpoint (`POST /api/manage/{entity_type}/{entity_id}` with `entity_type=task`). Functionally identical to **Update Task**, including the same `task:update` / `task:complete` PBAC rules.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status_id\": \"6f9619ff-8b86-d011-b42d-00cf4fc964ff\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [
+            {
+              "name": "200 OK - Success",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text",
+                    "description": "Required for all requests that send a JSON request body."
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/manage/task/{{task_id}}",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "manage",
+                    "task",
+                    "{{task_id}}"
+                  ]
+                },
+                "description": "**Use case:** Alternate/unified update endpoint (`POST /api/manage/{entity_type}/{entity_id}` with `entity_type=task`). Functionally identical to **Update Task**, including the same `task:update` / `task:complete` PBAC rules.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"status_id\": \"6f9619ff-8b86-d011-b42d-00cf4fc964ff\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json",
+                  "type": "text",
+                  "description": ""
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"message\": \"Task updated successfully\",\n  \"task\": {\n    \"task_id\": \"7d8e9f01-0213-2425-e6f7-a8b9c0d1e2f3\",\n    \"status_name\": \"In Progress\"\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "Delete Task (Unified Manage API)",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/manage/task/{{task_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "manage",
+                "task",
+                "{{task_id}}"
+              ]
+            },
+            "description": "**Use case:** Alternate/unified delete endpoint (`DELETE /api/manage/{entity_type}/{entity_id}` with `entity_type=task`). Functionally identical to **Delete Task**, including the same `task:delete` PBAC rule (Owner/Assignee + status must be Todo)."
+          },
+          "response": [
+            {
+              "name": "200 OK - Success",
+              "originalRequest": {
+                "method": "DELETE",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/api/manage/task/{{task_id}}",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "manage",
+                    "task",
+                    "{{task_id}}"
+                  ]
+                },
+                "description": "**Use case:** Alternate/unified delete endpoint (`DELETE /api/manage/{entity_type}/{entity_id}` with `entity_type=task`). Functionally identical to **Delete Task**, including the same `task:delete` PBAC rule (Owner/Assignee + status must be Todo)."
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json",
+                  "type": "text",
+                  "description": ""
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"message\": \"Task '7d8e9f01-0213-2425-e6f7-a8b9c0d1e2f3' deleted successfully\"\n}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Dashboard",
+      "description": "Unified analytics/telemetry endpoint (pending tasks, task distribution, time-based throughput, productivity insights, recent activity) for the authenticated user's accessible projects and tasks. There is no separate Analytics or Notifications API in this backend — analytics is served entirely from this endpoint, and email is an internal side-effect of the password-reset flow rather than its own API.",
+      "item": [
+        {
+          "name": "Get Dashboard Telemetry",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/dashboard",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "dashboard"
+              ]
+            },
+            "description": "**Use case:** Single aggregated payload powering the Dashboard/Analytics screen: pending tasks (with urgency), task distribution by project, time-based throughput analytics (7d/30d/90d), productivity insights (today/week/month/YTD), and recently created or updated tasks. All figures are computed live from the caller's accessible projects and tasks — no separate 'Analytics' endpoint exists, this response *is* the analytics data.\n\n**Access control:** Authenticated (any logged-in user); results are scoped to projects the caller owns or is a member of, plus tasks assigned to or created by them."
+          },
+          "response": [
+            {
+              "name": "200 OK - Success",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/api/dashboard",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "dashboard"
+                  ]
+                },
+                "description": "**Use case:** Single aggregated payload powering the Dashboard/Analytics screen: pending tasks (with urgency), task distribution by project, time-based throughput analytics (7d/30d/90d), productivity insights (today/week/month/YTD), and recently created or updated tasks. All figures are computed live from the caller's accessible projects and tasks — no separate 'Analytics' endpoint exists, this response *is* the analytics data.\n\n**Access control:** Authenticated (any logged-in user); results are scoped to projects the caller owns or is a member of, plus tasks assigned to or created by them."
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json",
+                  "type": "text",
+                  "description": ""
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"pendingTasks\": {\n    \"counts\": {\n      \"all\": 7,\n      \"in_progress\": 3,\n      \"todo\": 4,\n      \"high_priority\": 2\n    },\n    \"tasks\": [\n      {\n        \"id\": \"7d8e9f01-0213-2425-e6f7-a8b9c0d1e2f3\",\n        \"title\": \"Design new landing page hero section\",\n        \"projectName\": \"Q4 Strategic Rebranding\",\n        \"status\": \"To Do\",\n        \"priority\": \"High\",\n        \"dueDate\": \"Aug 20, 2026\",\n        \"urgent\": true\n      }\n    ]\n  },\n  \"taskDistribution\": {\n    \"totalProjects\": 3,\n    \"totalTasks\": 12,\n    \"items\": [\n      {\n        \"name\": \"Q4 Strategic Rebranding\",\n        \"count\": 12,\n        \"percentage\": 100\n      }\n    ]\n  },\n  \"timeAnalytics\": {\n    \"7d\": {\n      \"throughput\": \"45%\",\n      \"velocity\": \"+12%\",\n      \"avgResolution\": \"2.4 days\",\n      \"bars\": []\n    },\n    \"30d\": {\n      \"throughput\": \"58%\",\n      \"velocity\": \"+8%\",\n      \"avgResolution\": \"3.1 days\",\n      \"bars\": []\n    },\n    \"90d\": {\n      \"throughput\": \"63%\",\n      \"velocity\": \"+5%\",\n      \"avgResolution\": \"3.6 days\",\n      \"bars\": []\n    }\n  },\n  \"productivityInsights\": {\n    \"today\": {\n      \"label\": \"Today\",\n      \"score\": 82,\n      \"status\": \"High Productivity\",\n      \"onTimeRate\": \"90%\",\n      \"completedToday\": 2,\n      \"goal\": 3,\n      \"focusHours\": \"5.0 hrs\"\n    },\n    \"week\": {\n      \"label\": \"Week\",\n      \"score\": 78,\n      \"status\": \"Consistent Output\",\n      \"onTimeRate\": \"85%\",\n      \"completedToday\": 9,\n      \"goal\": 12,\n      \"focusHours\": \"22.5 hrs\"\n    },\n    \"month\": {\n      \"label\": \"Month\",\n      \"score\": 74,\n      \"status\": \"Consistent Output\",\n      \"onTimeRate\": \"80%\",\n      \"completedToday\": 24,\n      \"goal\": 32,\n      \"focusHours\": \"60.0 hrs\"\n    },\n    \"ytd\": {\n      \"label\": \"Ytd\",\n      \"score\": 71,\n      \"status\": \"Consistent Output\",\n      \"onTimeRate\": \"77%\",\n      \"completedToday\": 96,\n      \"goal\": 130,\n      \"focusHours\": \"240.0 hrs\"\n    }\n  },\n  \"recentTasks\": {\n    \"total\": 1,\n    \"tasks\": [\n      {\n        \"id\": \"7d8e9f01-0213-2425-e6f7-a8b9c0d1e2f3\",\n        \"title\": \"Design new landing page hero section\",\n        \"projectName\": \"Q4 Strategic Rebranding\",\n        \"status\": \"To Do\",\n        \"action\": \"Created\",\n        \"formatted_time\": \"Aug 03, 11:10 AM\"\n      }\n    ]\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "Get Dashboard Telemetry (Alias)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/dashboard",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "dashboard"
+              ]
+            },
+            "description": "**Use case:** Identical alias of **Get Dashboard Telemetry** mounted at `/dashboard` (without the `/api` prefix) for clients that call the non-prefixed path.\n\n**Access control:** Authenticated (any logged-in user); same scoping as the primary route."
+          },
+          "response": [
+            {
+              "name": "200 OK - Success",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/dashboard",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "dashboard"
+                  ]
+                },
+                "description": "**Use case:** Identical alias of **Get Dashboard Telemetry** mounted at `/dashboard` (without the `/api` prefix) for clients that call the non-prefixed path.\n\n**Access control:** Authenticated (any logged-in user); same scoping as the primary route."
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json",
+                  "type": "text",
+                  "description": ""
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"pendingTasks\": {\n    \"counts\": {\n      \"all\": 7,\n      \"in_progress\": 3,\n      \"todo\": 4,\n      \"high_priority\": 2\n    },\n    \"tasks\": [\n      {\n        \"id\": \"7d8e9f01-0213-2425-e6f7-a8b9c0d1e2f3\",\n        \"title\": \"Design new landing page hero section\",\n        \"projectName\": \"Q4 Strategic Rebranding\",\n        \"status\": \"To Do\",\n        \"priority\": \"High\",\n        \"dueDate\": \"Aug 20, 2026\",\n        \"urgent\": true\n      }\n    ]\n  },\n  \"taskDistribution\": {\n    \"totalProjects\": 3,\n    \"totalTasks\": 12,\n    \"items\": [\n      {\n        \"name\": \"Q4 Strategic Rebranding\",\n        \"count\": 12,\n        \"percentage\": 100\n      }\n    ]\n  },\n  \"timeAnalytics\": {\n    \"7d\": {\n      \"throughput\": \"45%\",\n      \"velocity\": \"+12%\",\n      \"avgResolution\": \"2.4 days\",\n      \"bars\": []\n    },\n    \"30d\": {\n      \"throughput\": \"58%\",\n      \"velocity\": \"+8%\",\n      \"avgResolution\": \"3.1 days\",\n      \"bars\": []\n    },\n    \"90d\": {\n      \"throughput\": \"63%\",\n      \"velocity\": \"+5%\",\n      \"avgResolution\": \"3.6 days\",\n      \"bars\": []\n    }\n  },\n  \"productivityInsights\": {\n    \"today\": {\n      \"label\": \"Today\",\n      \"score\": 82,\n      \"status\": \"High Productivity\",\n      \"onTimeRate\": \"90%\",\n      \"completedToday\": 2,\n      \"goal\": 3,\n      \"focusHours\": \"5.0 hrs\"\n    },\n    \"week\": {\n      \"label\": \"Week\",\n      \"score\": 78,\n      \"status\": \"Consistent Output\",\n      \"onTimeRate\": \"85%\",\n      \"completedToday\": 9,\n      \"goal\": 12,\n      \"focusHours\": \"22.5 hrs\"\n    },\n    \"month\": {\n      \"label\": \"Month\",\n      \"score\": 74,\n      \"status\": \"Consistent Output\",\n      \"onTimeRate\": \"80%\",\n      \"completedToday\": 24,\n      \"goal\": 32,\n      \"focusHours\": \"60.0 hrs\"\n    },\n    \"ytd\": {\n      \"label\": \"Ytd\",\n      \"score\": 71,\n      \"status\": \"Consistent Output\",\n      \"onTimeRate\": \"77%\",\n      \"completedToday\": 96,\n      \"goal\": 130,\n      \"focusHours\": \"240.0 hrs\"\n    }\n  },\n  \"recentTasks\": {\n    \"total\": 1,\n    \"tasks\": [\n      {\n        \"id\": \"7d8e9f01-0213-2425-e6f7-a8b9c0d1e2f3\",\n        \"title\": \"Design new landing page hero section\",\n        \"projectName\": \"Q4 Strategic Rebranding\",\n        \"status\": \"To Do\",\n        \"action\": \"Created\",\n        \"formatted_time\": \"Aug 03, 11:10 AM\"\n      }\n    ]\n  }\n}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Search",
+      "description": "Global, PBAC-filtered fuzzy search across the caller's accessible Projects and Tasks.",
+      "item": [
+        {
+          "name": "Global Search",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/search?q=landing&limit=8",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "search"
+              ],
+              "query": [
+                {
+                  "key": "q",
+                  "value": "landing",
+                  "description": "Required (effectively). Search query string; empty string returns empty result sets."
+                },
+                {
+                  "key": "limit",
+                  "value": "8",
+                  "description": "Optional (default 8). Max results per group (projects/tasks)."
+                }
+              ]
+            },
+            "description": "**Use case:** Fuzzy, ranked search across Projects and Tasks (exact / prefix / substring / word-level / edit-distance matching), for the app's global search bar.\n\n**PBAC:** Results are always pre-filtered to only Projects the caller owns or is a member of, and Tasks in those projects or assigned to/created by the caller — no project/task the caller can't already see will ever appear.\n\n**Access control:** Authenticated (any logged-in user)."
+          },
+          "response": [
+            {
+              "name": "200 OK - Success",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/api/search?q=landing&limit=8",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "search"
+                  ],
+                  "query": [
+                    {
+                      "key": "q",
+                      "value": "landing",
+                      "description": "Required (effectively). Search query string; empty string returns empty result sets."
+                    },
+                    {
+                      "key": "limit",
+                      "value": "8",
+                      "description": "Optional (default 8). Max results per group (projects/tasks)."
+                    }
+                  ]
+                },
+                "description": "**Use case:** Fuzzy, ranked search across Projects and Tasks (exact / prefix / substring / word-level / edit-distance matching), for the app's global search bar.\n\n**PBAC:** Results are always pre-filtered to only Projects the caller owns or is a member of, and Tasks in those projects or assigned to/created by the caller — no project/task the caller can't already see will ever appear.\n\n**Access control:** Authenticated (any logged-in user)."
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json",
+                  "type": "text",
+                  "description": ""
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"query\": \"landing\",\n  \"projects\": [\n    {\n      \"id\": \"1b2c3d4e-5f60-7182-93a4-b5c6d7e8f9a0\",\n      \"name\": \"Landing Page Revamp\",\n      \"key\": \"LAN\",\n      \"description\": \"Revamp the marketing landing page.\",\n      \"category\": \"Development\",\n      \"score\": 1.0\n    }\n  ],\n  \"tasks\": [\n    {\n      \"id\": \"7d8e9f01-0213-2425-e6f7-a8b9c0d1e2f3\",\n      \"project_id\": \"1b2c3d4e-5f60-7182-93a4-b5c6d7e8f9a0\",\n      \"title\": \"Design new landing page hero section\",\n      \"description\": \"Explore 3 hero layout concepts.\",\n      \"status\": \"To Do\",\n      \"project_name\": \"Q4 Strategic Rebranding\",\n      \"score\": 0.95\n    }\n  ]\n}"
+            }
+          ]
+        },
+        {
+          "name": "Global Search (Alias)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/search?q=landing&limit=8",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "search"
+              ],
+              "query": [
+                {
+                  "key": "q",
+                  "value": "landing",
+                  "description": "Required (effectively). Search query string; empty string returns empty result sets."
+                },
+                {
+                  "key": "limit",
+                  "value": "8",
+                  "description": "Optional (default 8). Max results per group (projects/tasks)."
+                }
+              ]
+            },
+            "description": "**Use case:** Identical alias of **Global Search** mounted at `/search` (without the `/api` prefix) for clients that call the non-prefixed path.\n\n**Access control:** Authenticated (any logged-in user); same PBAC filtering as the primary route."
+          },
+          "response": [
+            {
+              "name": "200 OK - Success",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/search?q=landing&limit=8",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "search"
+                  ],
+                  "query": [
+                    {
+                      "key": "q",
+                      "value": "landing",
+                      "description": "Required (effectively). Search query string; empty string returns empty result sets."
+                    },
+                    {
+                      "key": "limit",
+                      "value": "8",
+                      "description": "Optional (default 8). Max results per group (projects/tasks)."
+                    }
+                  ]
+                },
+                "description": "**Use case:** Identical alias of **Global Search** mounted at `/search` (without the `/api` prefix) for clients that call the non-prefixed path.\n\n**Access control:** Authenticated (any logged-in user); same PBAC filtering as the primary route."
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json",
+                  "type": "text",
+                  "description": ""
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"query\": \"landing\",\n  \"projects\": [\n    {\n      \"id\": \"1b2c3d4e-5f60-7182-93a4-b5c6d7e8f9a0\",\n      \"name\": \"Landing Page Revamp\",\n      \"key\": \"LAN\",\n      \"description\": \"Revamp the marketing landing page.\",\n      \"category\": \"Development\",\n      \"score\": 1.0\n    }\n  ],\n  \"tasks\": [\n    {\n      \"id\": \"7d8e9f01-0213-2425-e6f7-a8b9c0d1e2f3\",\n      \"project_id\": \"1b2c3d4e-5f60-7182-93a4-b5c6d7e8f9a0\",\n      \"title\": \"Design new landing page hero section\",\n      \"description\": \"Explore 3 hero layout concepts.\",\n      \"status\": \"To Do\",\n      \"project_name\": \"Q4 Strategic Rebranding\",\n      \"score\": 0.95\n    }\n  ]\n}"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
