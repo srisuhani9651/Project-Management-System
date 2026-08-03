@@ -115,3 +115,49 @@ class UserUpdateSettings(BaseModel):
 class UpdateSettingsResponse(BaseModel):
     message: str = "Settings updated successfully"
     user: UserResponse
+
+
+class ForgotPasswordRequest(BaseModel):
+    """Request schema for Step 1 of the TOTP-based password reset flow."""
+    email: EmailStr = Field(..., description="Registered email address to receive the 30-second reset code")
+
+
+class ForgotPasswordResponse(BaseModel):
+    message: str = "If an account exists for this email, a 6-digit reset code has been sent."
+
+
+class VerifyResetCodeRequest(BaseModel):
+    """Request schema for Step 2: verifying the 6-digit stateless TOTP code."""
+    email: EmailStr = Field(..., description="Email address the code was requested for")
+    code: str = Field(..., min_length=6, max_length=6, description="6-digit TOTP code")
+
+
+class VerifyResetCodeResponse(BaseModel):
+    message: str = "Code verified successfully."
+    reset_token: str = Field(..., description="Short-lived signed token authorizing the password reset")
+
+
+class ResetPasswordRequest(BaseModel):
+    """Request schema for Step 3: setting the new password using the verified reset token."""
+    email: EmailStr = Field(..., description="Email address the reset token was issued for")
+    reset_token: str = Field(..., description="Short-lived signed token returned by /auth/verify-reset-code")
+    new_password: str = Field(..., min_length=8, description="New plain text password")
+
+    @field_validator("new_password")
+    @classmethod
+    def validate_new_password(cls, v: str) -> str:
+        if len(v) < 8:
+            raise ValueError("New password must be at least 8 characters long")
+        if not re.search(r"[A-Z]", v):
+            raise ValueError("New password must contain at least one uppercase letter (A-Z)")
+        if not re.search(r"[a-z]", v):
+            raise ValueError("New password must contain at least one lowercase letter (a-z)")
+        if not re.search(r"[0-9]", v):
+            raise ValueError("New password must contain at least one digit (0-9)")
+        if not re.search(r"[!@#$%^&*]", v):
+            raise ValueError("New password must contain at least one special character (!@#$%^&*)")
+        return v
+
+
+class ResetPasswordResponse(BaseModel):
+    message: str = "Password has been reset successfully. You can now log in with your new password."

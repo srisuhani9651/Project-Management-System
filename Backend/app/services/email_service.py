@@ -19,12 +19,24 @@ class EmailService:
     """
 
     @staticmethod
+    def _safe_print(message: str) -> None:
+        """
+        Prints diagnostic/log lines without ever raising — some console encodings
+        (e.g. Windows cp1252) can't render emoji, which would otherwise crash the
+        caller before the actual email send is even attempted.
+        """
+        try:
+            print(message)
+        except UnicodeEncodeError:
+            print(message.encode("ascii", errors="replace").decode("ascii"))
+
+    @staticmethod
     def _send_email(to_email: str, subject: str, html_content: str) -> bool:
         """Sends an HTML email over SMTP gracefully."""
-        print(f"\n=======================================================")
-        print(f"[EMAIL SERVICE DISPATCH] To: {to_email}")
-        print(f"Subject: {subject}")
-        print(f"=======================================================")
+        EmailService._safe_print(f"\n=======================================================")
+        EmailService._safe_print(f"[EMAIL SERVICE DISPATCH] To: {to_email}")
+        EmailService._safe_print(f"Subject: {subject}")
+        EmailService._safe_print(f"=======================================================")
 
         try:
             msg = MIMEMultipart("alternative")
@@ -42,12 +54,12 @@ class EmailService:
                 server.login(SMTP_USER, SMTP_PASSWORD)
                 server.sendmail(SENDER_EMAIL, [to_email], msg.as_string())
                 server.quit()
-                print(f"[EMAIL SERVICE SUCCESS] Email sent to {to_email}")
+                EmailService._safe_print(f"[EMAIL SERVICE SUCCESS] Email sent to {to_email}")
             else:
-                print(f"[EMAIL SERVICE MOCK DISPATCH] SMTP credentials not configured. Printed email contents to console.")
+                EmailService._safe_print(f"[EMAIL SERVICE MOCK DISPATCH] SMTP credentials not configured. Printed email contents to console.")
             return True
         except Exception as e:
-            print(f"[EMAIL SERVICE WARNING] Failed to deliver email to {to_email}: {e}")
+            EmailService._safe_print(f"[EMAIL SERVICE WARNING] Failed to deliver email to {to_email}: {e}")
             return False
 
     @staticmethod
@@ -116,7 +128,7 @@ class EmailService:
 </body>
 </html>
         """
-        print(f"\n🔑 [TOTP CODE FOR {to_email}]: {code} (Valid for 30s)\n")
+        EmailService._safe_print(f"\n[TOTP CODE FOR {to_email}]: {code} (Valid for 30s)\n")
         return EmailService._send_email(to_email, subject, html_content)
 
     @staticmethod
@@ -242,5 +254,5 @@ class EmailService:
 </body>
 </html>
         """
-        print(f"\n📧 [TASK NOTIFICATION EMAIL TO {to_email}]: {task_title} ({project_name})\n")
+        EmailService._safe_print(f"\n[TASK NOTIFICATION EMAIL TO {to_email}]: {task_title} ({project_name})\n")
         return EmailService._send_email(to_email, subject, html_content)

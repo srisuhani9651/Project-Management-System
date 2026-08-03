@@ -13,6 +13,7 @@ from app.models.lov.task_type import TaskType
 from app.models.tracker.project import Project
 from app.models.tracker.project_members import ProjectMember
 from app.models.tracker.tasks import Task
+from app.services.email_service import EmailService
 from app.services.schemas.task import (
     CreateTaskResponse,
     TaskCreate,
@@ -71,6 +72,9 @@ class TaskService:
         # Auto-add assigned user to project_members table if not already present
         TaskService._ensure_assignee_is_project_member(new_task.project_id, new_task.assignee_id, db)
 
+        # Notify the assignee by email. Never let delivery issues affect task creation.
+        TaskService._send_assignment_notification(new_task, current_user_id, db)
+
         task_res = TaskService._format_task_response(new_task, db)
 
         return CreateTaskResponse(
@@ -97,6 +101,8 @@ class TaskService:
                 detail=f"Task with ID '{task_id}' not found."
             )
 
+        previous_assignee_id = task.assignee_id
+
         update_dict = task_data.model_dump(exclude_unset=True)
         for key, value in update_dict.items():
             setattr(task, key, value)
@@ -118,12 +124,61 @@ class TaskService:
         # Auto-add assigned user to project_members table if not already present
         TaskService._ensure_assignee_is_project_member(task.project_id, task.assignee_id, db)
 
+        # Notify the (new) assignee by email only when the task was actually
+        # (re)assigned to someone. Never let delivery issues affect the update.
+        if task.assignee_id and str(task.assignee_id) != str(previous_assignee_id):
+            TaskService._send_assignment_notification(task, current_user_id, db)
+
         task_res = TaskService._format_task_response(task, db)
 
         return UpdateTaskResponse(
             message="Task updated successfully",
             task=task_res
         )
+
+    @staticmethod
+    def _send_assignment_notification(task: Any, assigner_user_id: Any, db: Session) -> None:
+        """
+        Sends the task-assignment HTML email to the current assignee.
+        Wrapped so any failure (missing data, DB hiccup, SMTP error) is swallowed —
+        email delivery must never affect task creation/assignment success.
+        """
+        try:
+            if not task.assignee_id:
+                return
+
+            assignee = db.query(UserMaster).filter(UserMaster.user_id == task.assignee_id).first()
+            if not assignee or not assignee.email:
+                return
+
+            assigner = db.query(UserMaster).filter(UserMaster.user_id == assigner_user_id).first()
+            assigner_name = assigner.full_name if assigner else "A workspace member"
+
+            project = db.query(Project).filter(Project.project_id == task.project_id).first()
+            project_name = project.project_name if project else "Project Workspace"
+
+            status_obj = db.query(Status).filter(Status.status_id == task.status_id).first()
+            status_name = status_obj.status_name if status_obj else "To Do"
+
+            priority_obj = db.query(Priority).filter(Priority.priority_id == task.priority_id).first()
+            priority_name = priority_obj.priority_name if priority_obj else "Medium"
+
+            due_date_str = task.due_date.strftime("%b %d, %Y") if task.due_date else None
+
+            EmailService.send_task_assignment_email(
+                to_email=str(assignee.email),
+                assignee_name=str(assignee.full_name),
+                assigner_name=str(assigner_name),
+                project_name=str(project_name),
+                task_title=str(task.title),
+                task_description=task.description,
+                priority=str(priority_name),
+                status=str(status_name),
+                due_date=due_date_str,
+                task_id=str(task.task_id),
+            )
+        except Exception as e:
+            print(f"[TASK NOTIFICATION WARNING] Failed to send assignment email for task '{getattr(task, 'task_id', '?')}': {e}")
 
     @staticmethod
     def _ensure_assignee_is_project_member(project_id: Any, assignee_id: Any, db: Session):

@@ -1,3 +1,4 @@
+import hashlib
 import os
 import re
 from datetime import datetime, timedelta, timezone
@@ -51,4 +52,37 @@ def create_access_token(data: dict) -> str:
     if isinstance(encoded_jwt, bytes):
         return encoded_jwt.decode("utf-8")
     return encoded_jwt
+
+
+PASSWORD_RESET_TOKEN_PURPOSE = "password_reset"
+
+
+def create_password_reset_token(user_id: str, email: str, hashed_password: str) -> str:
+    """
+    Issues a short-lived (5 min), signed JWT authorizing a single password reset,
+    scoped to the user's current password hash so it is invalidated the moment
+    the password actually changes. Nothing is persisted server-side.
+    """
+    to_encode = {
+        "sub": str(user_id),
+        "email": str(email).strip().lower(),
+        "purpose": PASSWORD_RESET_TOKEN_PURPOSE,
+        # Bind the token to the current password hash so it can't be replayed
+        # after a successful reset (or reused if the password changes elsewhere).
+        "pwd_fp": hashlib.sha256(str(hashed_password).encode("utf-8")).hexdigest()[:16],
+        "exp": datetime.now(timezone.utc) + timedelta(minutes=5),
+        "iat": datetime.now(timezone.utc),
+    }
+    encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
+    if isinstance(encoded_jwt, bytes):
+        return encoded_jwt.decode("utf-8")
+    return encoded_jwt
+
+
+def decode_password_reset_token(token: str) -> dict:
+    """Decodes and validates a password reset token. Raises jwt exceptions on failure."""
+    payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+    if payload.get("purpose") != PASSWORD_RESET_TOKEN_PURPOSE:
+        raise jwt.InvalidTokenError("Token is not a valid password reset token.")
+    return payload
 

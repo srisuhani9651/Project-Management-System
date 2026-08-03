@@ -191,6 +191,132 @@
         ]
       }
     },
+    "/auth/forgot-password": {
+      "post": {
+        "tags": [
+          "Authentication"
+        ],
+        "summary": "Request a password reset code (Unauthenticated)",
+        "description": "Generates a stateless 6-digit TOTP code (valid for 30 seconds), derived from the user's id + current password hash + a server secret via HMAC \u2014 never persisted to the database \u2014 and emails it to the user.",
+        "operationId": "forgot_password_auth_forgot_password_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ForgotPasswordRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ForgotPasswordResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/auth/verify-reset-code": {
+      "post": {
+        "tags": [
+          "Authentication"
+        ],
+        "summary": "Verify the 6-digit TOTP reset code (Unauthenticated)",
+        "description": "Verifies the code against the current +/- 30s TOTP window and issues a short-lived reset token.",
+        "operationId": "verify_reset_code_auth_verify_reset_code_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VerifyResetCodeRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VerifyResetCodeResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/auth/reset-password": {
+      "post": {
+        "tags": [
+          "Authentication"
+        ],
+        "summary": "Set a new password using a verified reset token (Unauthenticated)",
+        "description": "Validates the short-lived reset token issued by /auth/verify-reset-code and updates the password.",
+        "operationId": "reset_password_auth_reset_password_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ResetPasswordRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResetPasswordResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/manage/{entity_type}": {
       "post": {
         "tags": [
@@ -1461,6 +1587,33 @@
         ],
         "title": "CreateTaskResponse"
       },
+      "ForgotPasswordRequest": {
+        "properties": {
+          "email": {
+            "type": "string",
+            "format": "email",
+            "title": "Email",
+            "description": "Registered email address to receive the 30-second reset code"
+          }
+        },
+        "type": "object",
+        "required": [
+          "email"
+        ],
+        "title": "ForgotPasswordRequest",
+        "description": "Request schema for Step 1 of the TOTP-based password reset flow."
+      },
+      "ForgotPasswordResponse": {
+        "properties": {
+          "message": {
+            "type": "string",
+            "title": "Message",
+            "default": "If an account exists for this email, a 6-digit reset code has been sent."
+          }
+        },
+        "type": "object",
+        "title": "ForgotPasswordResponse"
+      },
       "HTTPValidationError": {
         "properties": {
           "detail": {
@@ -2159,6 +2312,46 @@
         ],
         "title": "RegisterResponse",
         "description": "WHAT IT DOES: Response schema returned after successful registration.\nEXPECTED RESULT: Contains success message, JWT access token, and created user details."
+      },
+      "ResetPasswordRequest": {
+        "properties": {
+          "email": {
+            "type": "string",
+            "format": "email",
+            "title": "Email",
+            "description": "Email address the reset token was issued for"
+          },
+          "reset_token": {
+            "type": "string",
+            "title": "Reset Token",
+            "description": "Short-lived signed token returned by /auth/verify-reset-code"
+          },
+          "new_password": {
+            "type": "string",
+            "minLength": 8,
+            "title": "New Password",
+            "description": "New plain text password"
+          }
+        },
+        "type": "object",
+        "required": [
+          "email",
+          "reset_token",
+          "new_password"
+        ],
+        "title": "ResetPasswordRequest",
+        "description": "Request schema for Step 3: setting the new password using the verified reset token."
+      },
+      "ResetPasswordResponse": {
+        "properties": {
+          "message": {
+            "type": "string",
+            "title": "Message",
+            "default": "Password has been reset successfully. You can now log in with your new password."
+          }
+        },
+        "type": "object",
+        "title": "ResetPasswordResponse"
       },
       "TaskCreate": {
         "properties": {
@@ -2887,6 +3080,49 @@
           "type"
         ],
         "title": "ValidationError"
+      },
+      "VerifyResetCodeRequest": {
+        "properties": {
+          "email": {
+            "type": "string",
+            "format": "email",
+            "title": "Email",
+            "description": "Email address the code was requested for"
+          },
+          "code": {
+            "type": "string",
+            "maxLength": 6,
+            "minLength": 6,
+            "title": "Code",
+            "description": "6-digit TOTP code"
+          }
+        },
+        "type": "object",
+        "required": [
+          "email",
+          "code"
+        ],
+        "title": "VerifyResetCodeRequest",
+        "description": "Request schema for Step 2: verifying the 6-digit stateless TOTP code."
+      },
+      "VerifyResetCodeResponse": {
+        "properties": {
+          "message": {
+            "type": "string",
+            "title": "Message",
+            "default": "Code verified successfully."
+          },
+          "reset_token": {
+            "type": "string",
+            "title": "Reset Token",
+            "description": "Short-lived signed token authorizing the password reset"
+          }
+        },
+        "type": "object",
+        "required": [
+          "reset_token"
+        ],
+        "title": "VerifyResetCodeResponse"
       }
     },
     "securitySchemes": {

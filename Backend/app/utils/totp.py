@@ -1,12 +1,16 @@
 import base64
 import hashlib
 import hmac
+import os
 import struct
 import time
 from typing import Optional
+from dotenv import load_dotenv
 
-# Server Secret Key used for HMAC hashing
-SERVER_SECRET_KEY = "PROJECT_FLOW_SECURE_SERVER_SECRET_KEY_2026_TOTP"
+load_dotenv()
+
+# Server Secret Key used for HMAC hashing (never persisted, never exposed to clients)
+SERVER_SECRET_KEY = os.getenv("TOTP_SERVER_SECRET_KEY", "PROJECT_FLOW_SECURE_SERVER_SECRET_KEY_2026_TOTP")
 
 
 def _derive_user_totp_secret(user_id: str, hashed_password: str) -> bytes:
