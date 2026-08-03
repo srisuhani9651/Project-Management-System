@@ -3,7 +3,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.db.database import init_db
-from app.routers import auth, tracker, dashboard, members
+from app.routers import auth, tracker, dashboard, members, search
 
 
 @asynccontextmanager
@@ -47,6 +47,7 @@ app.include_router(auth.router)
 app.include_router(tracker.router)
 app.include_router(dashboard.router)
 app.include_router(members.router)
+app.include_router(search.router)
 
 
 # ==============================================================================

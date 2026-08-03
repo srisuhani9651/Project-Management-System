@@ -1222,6 +1222,136 @@
         ]
       }
     },
+    "/search": {
+      "get": {
+        "tags": [
+          "Global Search"
+        ],
+        "summary": "Global PBAC-filtered fuzzy search for Projects and Tasks (alias)",
+        "description": "Global fuzzy search API across Projects and Tasks.\nEnforces PBAC rules: user only receives projects and tasks they are authorized to view.\nRanks best matches first using fuzzy scoring.",
+        "operationId": "global_search_search_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "q",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "description": "Search query string",
+              "default": "",
+              "title": "Q"
+            },
+            "description": "Search query string"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "description": "Max results per group",
+              "default": 8,
+              "title": "Limit"
+            },
+            "description": "Max results per group"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Global Search Search Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/search": {
+      "get": {
+        "tags": [
+          "Global Search"
+        ],
+        "summary": "Global PBAC-filtered fuzzy search for Projects and Tasks",
+        "description": "Global fuzzy search API across Projects and Tasks.\nEnforces PBAC rules: user only receives projects and tasks they are authorized to view.\nRanks best matches first using fuzzy scoring.",
+        "operationId": "global_search_api_search_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "q",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "description": "Search query string",
+              "default": "",
+              "title": "Q"
+            },
+            "description": "Search query string"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "description": "Max results per group",
+              "default": 8,
+              "title": "Limit"
+            },
+            "description": "Max results per group"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Global Search Api Search Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/": {
       "get": {
         "summary": "Home",
