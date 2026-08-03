@@ -12,11 +12,9 @@ import {
   ShieldAlert,
   Send,
   Loader2,
-  Paperclip,
   FileQuestion,
   AlertCircle,
-  FolderKanban,
-  UploadCloud
+  FolderKanban
 } from "lucide-react"
 import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
@@ -581,18 +579,6 @@ export function TaskDetails() {
                       </button>
                     )
                   })}
-                </div>
-              </div>
-
-              {/* Attachments Section */}
-              <div className="space-y-3 p-5 rounded-2xl border border-border/80 bg-card/60 shadow-xs">
-                <h3 className="text-xs font-extrabold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
-                  <Paperclip className="h-4 w-4 text-primary" /> Task Attachments
-                </h3>
-                <div className="p-4 rounded-xl border border-dashed border-border/80 bg-muted/20 text-center space-y-2">
-                  <UploadCloud className="h-7 w-7 text-muted-foreground/50 mx-auto" />
-                  <p className="text-xs font-semibold text-foreground">No attachments uploaded yet</p>
-                  <p className="text-[11px] text-muted-foreground">Files attached to this task will appear here.</p>
                 </div>
               </div>
 
