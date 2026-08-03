@@ -139,7 +139,7 @@ export function TaskTable({ tasks = [], onDeleteTask, onUpdateTaskStatus, onCrea
             </TableHeader>
             <TableBody>
               {paginatedTasks.map((task) => {
-                const taskId = task.id || task.task_id
+                const taskId = task.task_id || task.id
                 const taskTitle = task.title || task.name || "Untitled Task"
                 const assignedName = task.assigned_to || task.assignee_name || task.assignee || "Unassigned"
                 const priorityVal = task.priority_name || task.priority || "Medium"

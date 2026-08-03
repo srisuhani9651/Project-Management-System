@@ -89,7 +89,7 @@ export function RecentTasksList({ recentData, recentTasks = [], title = "Recent 
         ) : (
           filteredTasks.map((task) => {
             const isCreated = (task.action || "").toLowerCase() === "created"
-            const taskKey = task.id || task.task_id
+            const taskKey = task.task_id || task.id
             const assigneeName = task.assignee || task.creator_name || task.assigned_to
 
             return (

@@ -104,8 +104,8 @@ export function BoardView({ tasks = [], onUpdateTaskStatus }) {
 
                     return (
                       <Card
-                        key={task.id}
-                        onClick={() => navigate(`/tasks/${task.id}`)}
+                        key={task.task_id || task.id}
+                        onClick={() => navigate(`/tasks/${task.task_id || task.id}`)}
                         className="border border-border/70 bg-card hover:border-blue-500/40 hover:shadow-md transition-all p-4 space-y-3 rounded-xl cursor-pointer group"
                       >
                         {/* Title + Priority */}

@@ -115,7 +115,10 @@ export function PendingTasksList({ pendingData, tasks = [], onToggleTaskStatus, 
                   </button>
 
                   <div className="space-y-1 min-w-0">
-                    <h4 className="text-xs font-medium text-foreground group-hover:text-blue-600 transition-colors line-clamp-1">
+                    <h4
+                      onClick={() => navigate(`/tasks/${task.task_id || task.id || ""}`)}
+                      className="text-xs font-medium text-foreground group-hover:text-blue-600 transition-colors line-clamp-1 cursor-pointer hover:underline"
+                    >
                       {task.title}
                     </h4>
 
@@ -144,7 +147,7 @@ export function PendingTasksList({ pendingData, tasks = [], onToggleTaskStatus, 
                 {/* Right Action Button */}
                 <button
                   type="button"
-                  onClick={() => navigate(`/tasks/${task.id || task.task_id || ""}`)}
+                  onClick={() => navigate(`/tasks/${task.task_id || task.id || ""}`)}
                   className="opacity-0 group-hover:opacity-100 transition-opacity p-1.5 rounded-lg hover:bg-muted text-muted-foreground hover:text-foreground shrink-0 cursor-pointer"
                   title="View Details"
                 >
