@@ -9,7 +9,7 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card"
  * Multi-select dropdown to add members to a project.
  * Uses GET /api/members/users for user list and POST /api/members to submit.
  */
-export function AddMemberModal({ open, onOpenChange, projectId }) {
+export function AddMemberModal({ open, onOpenChange, projectId, onMembersAdded }) {
   const [users, setUsers] = useState([])
   const [selected, setSelected] = useState([])
   const [search, setSearch] = useState("")
@@ -18,7 +18,7 @@ export function AddMemberModal({ open, onOpenChange, projectId }) {
   const [error, setError] = useState("")
   const [success, setSuccess] = useState("")
 
-  // Fetch dropdown users on open
+  // Fetch non-member users on open
   useEffect(() => {
     if (!open) return
     setSelected([])
@@ -26,11 +26,15 @@ export function AddMemberModal({ open, onOpenChange, projectId }) {
     setError("")
     setSuccess("")
     setLoading(true)
-    api.get("/api/members/users")
+
+    const params = { exclude_project_members: true }
+    if (projectId) params.project_id = projectId
+
+    api.get("/api/members/users", { params })
       .then((res) => setUsers(res.data || []))
-      .catch(() => setError("Failed to load users."))
+      .catch(() => setError("Failed to load available users."))
       .finally(() => setLoading(false))
-  }, [open])
+  }, [open, projectId])
 
   if (!open) return null
 
@@ -56,7 +60,10 @@ export function AddMemberModal({ open, onOpenChange, projectId }) {
       const { added, skipped } = res.data
       setSuccess(`${added} member(s) added${skipped ? `, ${skipped} duplicate(s) skipped` : ""}.`)
       setSelected([])
-      setTimeout(() => onOpenChange(false), 1500)
+      if (onMembersAdded) {
+        onMembersAdded(res.data)
+      }
+      setTimeout(() => onOpenChange(false), 1200)
     } catch (err) {
       setError(err.response?.data?.detail || "Failed to add members.")
     } finally {

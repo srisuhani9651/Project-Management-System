@@ -5,6 +5,7 @@ import { Card } from "@/components/ui/card"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { PriorityBadge } from "@/components/common/PriorityBadge"
 import { CustomSelect } from "@/components/ui/custom-select"
+import { useProject } from "@/context/ProjectContext"
 
 /**
  * Modern BoardView Component
@@ -12,6 +13,7 @@ import { CustomSelect } from "@/components/ui/custom-select"
  */
 export function BoardView({ tasks = [], onUpdateTaskStatus }) {
   const navigate = useNavigate()
+  const { user, authorize } = useProject()
 
   const columns = [
     {
@@ -102,6 +104,8 @@ export function BoardView({ tasks = [], onUpdateTaskStatus }) {
                         ? "In Progress"
                         : "To Do"
 
+                    const canEdit = authorize ? authorize(user, "update", "task", task) : true
+
                     return (
                       <Card
                         key={task.task_id || task.id}
@@ -139,9 +143,10 @@ export function BoardView({ tasks = [], onUpdateTaskStatus }) {
                         {/* Custom Select Status Dropdown */}
                         <div onClick={(e) => e.stopPropagation()}>
                           <CustomSelect
+                            disabled={!canEdit}
                             options={statusOptions}
                             value={currentStatusVal}
-                            onChange={(e) => onUpdateTaskStatus(task.id, e.target.value)}
+                            onChange={(e) => canEdit && onUpdateTaskStatus(task.id || task.task_id, e.target.value)}
                           />
                         </div>
                       </Card>

@@ -26,6 +26,7 @@ export function TaskForm({
   isLoading = false,
   submitLabel = "Save Task",
   onCancel,
+  excludeUserId,
 }) {
   const { user } = useProject()
   const defaultDueDate = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split("T")[0]
@@ -69,7 +70,11 @@ export function TaskForm({
       }
       setMembersLoading(true)
       try {
-        const res = await api.get(`/api/members/${formData.project_id}`)
+        const params = {}
+        if (excludeUserId && isUUID(excludeUserId)) {
+          params.exclude_user_id = excludeUserId
+        }
+        const res = await api.get(`/api/members/${formData.project_id}`, { params })
         if (Array.isArray(res.data)) {
           const membersList = res.data.map((m) => ({
             id: m.user_id,
@@ -100,7 +105,7 @@ export function TaskForm({
     }
 
     fetchProjectMembers()
-  }, [formData.project_id, currentUserId])
+  }, [formData.project_id, currentUserId, excludeUserId])
 
   useEffect(() => {
     async function fetchLOVsAndProjects() {

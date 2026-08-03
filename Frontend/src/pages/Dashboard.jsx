@@ -2,17 +2,19 @@ import React, { useState, useEffect } from "react"
 import { useNavigate } from "react-router-dom"
 import { useProject } from "@/context/ProjectContext"
 import api from "@/services/api"
-import { FolderPlus } from "lucide-react"
+import { FolderPlus, Plus, Loader2 } from "lucide-react"
 
 // Modern Dashboard Subcomponents
 import { ProjectTaskPieChart } from "@/components/dashboard/ProjectTaskPieChart"
 import { PendingTasksList } from "@/components/dashboard/PendingTasksList"
 import { TimebasedAnalytics } from "@/components/dashboard/TimebasedAnalytics"
 import { RecentTasksList } from "@/components/dashboard/RecentTasksList"
+import { Button } from "@/components/ui/button"
 
 /**
  * Modern Dynamic Dashboard Page Component
  * Connects to single backend API /api/dashboard for real database metrics.
+ * Displays 0 counts and clean empty state if no projects or tasks are assigned.
  */
 export function Dashboard() {
   const { user, fetchProjects } = useProject()
@@ -29,7 +31,7 @@ export function Dashboard() {
     return "Good Evening"
   }
 
-  const userName = user?.fullName || user?.full_name || "Suhani Srivastava"
+  const userName = user?.fullName || user?.full_name || "Workspace Member"
 
   // Fetch full dashboard telemetry from single API endpoint
   const fetchDashboardData = async () => {
@@ -39,7 +41,7 @@ export function Dashboard() {
       const data = res.data
       setTelemetry(data)
       // Empty state: no tasks and no projects for this user
-      const noTasks = (data?.pendingTasks?.counts?.all ?? 0) === 0
+      const noTasks = (data?.pendingTasks?.counts?.all ?? 0) === 0 && (data?.recentTasks?.tasks?.length ?? 0) === 0
       const noProjects = (data?.taskDistribution?.totalProjects ?? 0) === 0
       setIsEmpty(noTasks && noProjects)
     } catch (err) {
@@ -48,7 +50,7 @@ export function Dashboard() {
         const fallbackRes = await api.get("/dashboard")
         const data = fallbackRes.data
         setTelemetry(data)
-        const noTasks = (data?.pendingTasks?.counts?.all ?? 0) === 0
+        const noTasks = (data?.pendingTasks?.counts?.all ?? 0) === 0 && (data?.recentTasks?.tasks?.length ?? 0) === 0
         const noProjects = (data?.taskDistribution?.totalProjects ?? 0) === 0
         setIsEmpty(noTasks && noProjects)
       } catch (fallbackErr) {
@@ -84,7 +86,6 @@ export function Dashboard() {
     }
 
     try {
-      // Fetch LOV status options to get matching status_id for target status
       let statusId = null
       const lovRes = await api.get("/projects/lov").catch(() => null)
       if (lovRes?.data?.statuses) {
@@ -109,19 +110,25 @@ export function Dashboard() {
         updatePayload.status_id = statusId
       }
 
-      // Call backend API to persist task status change in database
       await api.post(`/tasks/${tId}`, updatePayload).catch(() => {
         return api.post(`/api/manage/task/${tId}`, updatePayload)
       })
 
-      // Refetch updated live database telemetry
       await fetchDashboardData()
       if (fetchProjects) fetchProjects()
     } catch (err) {
       console.error("Failed to update task status on backend:", err)
-      // Refetch on error to revert to true database state
       fetchDashboardData()
     }
+  }
+
+  if (loading) {
+    return (
+      <div className="flex-1 flex flex-col items-center justify-center min-h-[60vh] space-y-4 font-roboto">
+        <Loader2 className="h-10 w-10 text-primary animate-spin" />
+        <p className="text-sm font-semibold text-muted-foreground">Loading workspace telemetry...</p>
+      </div>
+    )
   }
 
   return (
@@ -137,28 +144,42 @@ export function Dashboard() {
             Here is your current pending tasks, analytics, and productivity telemetry.
           </p>
         </div>
+
+        {/* 0 Counts Metric Summary Pills if empty */}
+        <div className="flex items-center gap-2 shrink-0">
+          <div className="px-3 py-1.5 rounded-xl border border-border/70 bg-card shadow-xs flex items-center gap-2 text-xs">
+            <span className="text-muted-foreground font-medium">Projects:</span>
+            <span className="font-poppins font-semibold text-foreground">{telemetry?.taskDistribution?.totalProjects ?? 0}</span>
+          </div>
+          <div className="px-3 py-1.5 rounded-xl border border-border/70 bg-card shadow-xs flex items-center gap-2 text-xs">
+            <span className="text-muted-foreground font-medium">Pending Tasks:</span>
+            <span className="font-poppins font-semibold text-rose-600">{telemetry?.pendingTasks?.counts?.all ?? 0}</span>
+          </div>
+          <div className="px-3 py-1.5 rounded-xl border border-border/70 bg-card shadow-xs flex items-center gap-2 text-xs">
+            <span className="text-muted-foreground font-medium">Completed:</span>
+            <span className="font-poppins font-semibold text-emerald-600">{telemetry?.pendingTasks?.counts?.completed ?? 0}</span>
+          </div>
+        </div>
       </div>
 
       {/* Empty State — No projects/tasks for this user */}
-      {!loading && isEmpty ? (
-        <div className="flex flex-col items-center justify-center py-24 text-center space-y-5">
-          <div className="h-16 w-16 rounded-2xl bg-blue-500/10 flex items-center justify-center">
-            <FolderPlus className="h-8 w-8 text-blue-600 stroke-[1.5]" />
+      {isEmpty ? (
+        <div className="p-12 border border-dashed border-border/80 bg-card/60 backdrop-blur-md rounded-2xl text-center space-y-4 max-w-2xl mx-auto my-8">
+          <div className="h-16 w-16 rounded-2xl bg-blue-500/10 border border-blue-500/20 text-blue-600 flex items-center justify-center mx-auto">
+            <FolderPlus className="h-8 w-8 stroke-[1.5]" />
           </div>
           <div className="space-y-1.5">
-            <h2 className="font-poppins text-lg font-bold text-foreground">No Projects Found</h2>
-            <p className="text-sm text-muted-foreground max-w-xs">
-              You haven't created any projects yet. Start by creating your first project.
+            <h2 className="font-poppins text-lg font-bold text-foreground">No projects or tasks assigned yet.</h2>
+            <p className="text-xs text-muted-foreground max-w-md mx-auto">
+              You don't have any active projects or tasks assigned to your account yet. Create your first project or get added to an existing team workspace.
             </p>
           </div>
-          <button
-            type="button"
-            onClick={() => navigate("/projects/new")}
-            className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-poppins text-sm font-semibold transition-all shadow-sm cursor-pointer"
+          <Button
+            onClick={() => navigate("/projects/create")}
+            className="gap-2 font-bold text-xs rounded-xl shadow-xs"
           >
-            <FolderPlus className="h-4 w-4" />
-            Create New Project
-          </button>
+            <Plus className="h-4 w-4" /> Create New Project
+          </Button>
         </div>
       ) : (
         <>

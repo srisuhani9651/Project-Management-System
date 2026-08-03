@@ -16,6 +16,7 @@ import { PriorityBadge } from "@/components/common/PriorityBadge"
 import { PermissionButton } from "@/components/common/PermissionButton"
 import { EmptyState } from "@/components/common/EmptyState"
 import { EditTaskModal } from "@/components/project/EditTaskModal"
+import { useProject } from "@/context/ProjectContext"
 
 /**
  * Modern TaskTable Component
@@ -24,6 +25,7 @@ import { EditTaskModal } from "@/components/project/EditTaskModal"
  */
 export function TaskTable({ tasks = [], onDeleteTask, onUpdateTaskStatus, onCreateTask }) {
   const navigate = useNavigate()
+  const { user, authorize } = useProject()
   const [searchQuery, setSearchQuery] = useState("")
   const [statusFilter, setStatusFilter] = useState("All")
   const [priorityFilter, setPriorityFilter] = useState("All")
@@ -146,6 +148,8 @@ export function TaskTable({ tasks = [], onDeleteTask, onUpdateTaskStatus, onCrea
                 const statusVal = task.status_name || task.status || "To Do"
                 const dueDateStr = task.dueDate || (task.due_date ? new Date(task.due_date).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "No due date")
 
+                const canEdit = authorize ? authorize(user, "update", "task", task) : true
+
                 return (
                   <TableRow key={taskId} className="hover:bg-muted/30 transition-colors">
                     
@@ -184,6 +188,8 @@ export function TaskTable({ tasks = [], onDeleteTask, onUpdateTaskStatus, onCrea
                     {/* Inline Status Dropdown */}
                     <TableCell>
                       <select
+                        disabled={!canEdit}
+                        title={!canEdit ? "Read-only: Only task assignee or project owner can change status" : ""}
                         value={
                           statusVal.toLowerCase().includes("done") || statusVal.toLowerCase().includes("completed")
                             ? "Done"
@@ -191,8 +197,10 @@ export function TaskTable({ tasks = [], onDeleteTask, onUpdateTaskStatus, onCrea
                             ? "In Progress"
                             : "To Do"
                         }
-                        onChange={(e) => onUpdateTaskStatus(taskId, e.target.value)}
-                        className="h-7 text-[11px] font-semibold rounded-lg border border-border/70 bg-muted/20 px-2 text-foreground focus:outline-none focus:ring-1 focus:ring-blue-500/30 cursor-pointer hover:bg-card transition-colors"
+                        onChange={(e) => canEdit && onUpdateTaskStatus(taskId, e.target.value)}
+                        className={`h-7 text-[11px] font-semibold rounded-lg border border-border/70 bg-muted/20 px-2 text-foreground focus:outline-none focus:ring-1 focus:ring-blue-500/30 transition-colors ${
+                          !canEdit ? "opacity-60 cursor-not-allowed bg-muted/40" : "cursor-pointer hover:bg-card"
+                        }`}
                       >
                         <option value="To Do">To Do</option>
                         <option value="In Progress">In Progress</option>

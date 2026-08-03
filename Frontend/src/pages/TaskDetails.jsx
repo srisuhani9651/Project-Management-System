@@ -561,9 +561,14 @@ export function TaskDetails() {
                       <button
                         key={st}
                         type="button"
-                        disabled={updating}
-                        onClick={() => handleStatusChange(st)}
-                        className={`px-4 py-2 rounded-xl text-xs font-bold border transition-all cursor-pointer ${
+                        disabled={updating || !canEditTask}
+                        title={!canEditTask ? "Read-only: Only task assignee or project owner can update task status" : ""}
+                        onClick={() => canEditTask && handleStatusChange(st)}
+                        className={`px-4 py-2 rounded-xl text-xs font-bold border transition-all ${
+                          !canEditTask
+                            ? "opacity-50 cursor-not-allowed bg-muted/40 text-muted-foreground"
+                            : "cursor-pointer"
+                        } ${
                           isSelected
                             ? "bg-primary text-primary-foreground border-primary shadow-sm scale-[1.02]"
                             : "bg-background border-input hover:bg-muted text-foreground"
@@ -649,9 +654,12 @@ export function TaskDetails() {
                 <span className="text-[11px] font-bold text-muted-foreground">Priority Level</span>
                 <select
                   value={taskPriority}
-                  disabled={updating}
-                  onChange={(e) => handlePriorityChange(e.target.value)}
-                  className="w-full h-9 text-xs font-bold rounded-xl border border-input bg-card px-3 text-foreground focus:outline-none focus:ring-1 focus:ring-primary cursor-pointer"
+                  disabled={updating || !canEditTask}
+                  title={!canEditTask ? "Read-only: Only task assignee or project owner can change priority" : ""}
+                  onChange={(e) => canEditTask && handlePriorityChange(e.target.value)}
+                  className={`w-full h-9 text-xs font-bold rounded-xl border border-input bg-card px-3 text-foreground focus:outline-none focus:ring-1 focus:ring-primary ${
+                    !canEditTask ? "opacity-60 cursor-not-allowed bg-muted/40" : "cursor-pointer"
+                  }`}
                 >
                   <option value="Low">Low Priority</option>
                   <option value="Medium">Medium Priority</option>

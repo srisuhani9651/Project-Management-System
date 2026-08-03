@@ -378,50 +378,7 @@ export function Settings() {
 
           </div>
         </Card>
-
-        {/* SECTION 3: PREFERENCES & NOTIFICATIONS */}
-        <Card className="border border-border/80 bg-card rounded-2xl p-6 shadow-xs space-y-4">
-          <div className="flex items-center gap-2 pb-3 border-b border-border/50">
-            <div className="h-8 w-8 rounded-xl bg-purple-500/10 text-purple-600 flex items-center justify-center shrink-0">
-              <Bell className="h-4 w-4 stroke-[2]" />
-            </div>
-            <div>
-              <h2 className="font-poppins text-sm font-semibold text-foreground">Preferences & Notifications</h2>
-              <p className="font-roboto text-xs text-muted-foreground">Manage your desktop notifications and display options.</p>
-            </div>
-          </div>
-
-          <div className="space-y-3 pt-1">
-            {/* Email Notifications Toggle */}
-            <div className="flex items-center justify-between p-3.5 rounded-xl border border-border/60 bg-muted/20">
-              <div className="space-y-0.5">
-                <span className="text-xs font-semibold text-foreground">Email Notifications</span>
-                <p className="text-[11px] text-muted-foreground">Receive digest updates on task assignments and project deadlines.</p>
-              </div>
-              <input
-                type="checkbox"
-                checked={emailNotifications}
-                onChange={(e) => setEmailNotifications(e.target.checked)}
-                className="h-4 w-4 rounded border-border text-blue-600 focus:ring-blue-500 cursor-pointer"
-              />
-            </div>
-
-            {/* Compact Layout Toggle */}
-            <div className="flex items-center justify-between p-3.5 rounded-xl border border-border/60 bg-muted/20">
-              <div className="space-y-0.5">
-                <span className="text-xs font-semibold text-foreground">Compact Dashboard Mode</span>
-                <p className="text-[11px] text-muted-foreground">Reduce vertical padding across telemetry components for high density view.</p>
-              </div>
-              <input
-                type="checkbox"
-                checked={compactLayout}
-                onChange={(e) => setCompactLayout(e.target.checked)}
-                className="h-4 w-4 rounded border-border text-blue-600 focus:ring-blue-500 cursor-pointer"
-              />
-            </div>
-          </div>
-        </Card>
-
+       
         {/* Submit Action Footer */}
         <div className="flex items-center justify-end pt-2">
           <Button

@@ -28,10 +28,29 @@ export function ProjectProvider({ children }) {
 
   const authorize = (currentUser, action, resource, resourceData) => {
     if (!currentUser) return false
+    const userId = String(currentUser.id || currentUser.user_id || "")
+    if (!userId) return false
+
+    if (resource === "task") {
+      if (action === "read" || action === "view") return true
+
+      const isOwner =
+        (resourceData?.project_owner_id && String(resourceData.project_owner_id) === userId) ||
+        (resourceData?.projectOwnerId && String(resourceData.projectOwnerId) === userId)
+      const isAssignee =
+        (resourceData?.assignee_id && String(resourceData.assignee_id) === userId) ||
+        (resourceData?.assigneeId && String(resourceData.assigneeId) === userId)
+
+      if (action === "update" || action === "delete" || action === "complete" || action === "reassign") {
+        return Boolean(isOwner || isAssignee)
+      }
+    }
     return true
   }
 
   const loginUser = (userData) => {
+    localStorage.removeItem("pf_projects")
+    setProjects([])
     const token = userData.token || userData.access_token || localStorage.getItem("pf_token")
     if (token) {
       localStorage.setItem("pf_token", token)
@@ -54,6 +73,8 @@ export function ProjectProvider({ children }) {
     } finally {
       localStorage.removeItem("pf_token")
       localStorage.removeItem("pf_user")
+      localStorage.removeItem("pf_projects")
+      setProjects([])
       setUser(null)
     }
   }
