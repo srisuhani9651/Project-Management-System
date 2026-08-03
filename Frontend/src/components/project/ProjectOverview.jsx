@@ -1,7 +1,24 @@
 import React, { useState } from "react"
-import { PieChart, Filter } from "lucide-react"
+import { PieChart, Users, UserPlus, Crown } from "lucide-react"
 import { Card } from "@/components/ui/card"
 import { CustomSelect } from "@/components/ui/custom-select"
+
+const AVATAR_COLORS = [
+  "bg-blue-600",
+  "bg-indigo-600",
+  "bg-violet-600",
+  "bg-emerald-600",
+  "bg-rose-600",
+  "bg-amber-600",
+]
+
+const getInitials = (name = "") =>
+  name
+    .trim()
+    .split(/\s+/)
+    .slice(0, 2)
+    .map((p) => p.charAt(0).toUpperCase())
+    .join("") || "?"
 
 /**
  * Modern ProjectOverview Component
@@ -9,9 +26,9 @@ import { CustomSelect } from "@/components/ui/custom-select"
  * - Dynamic Pie Chart with toggle options for Status vs Priority
  * - Overall Workflow Completion progress bar
  * - Horizontal Priority Distribution breakdown
- * - Removed top 4 metric cards, recent activity, and generate report cards as requested
+ * - Team Members card with real project membership data
  */
-export function ProjectOverview({ tasks = [] }) {
+export function ProjectOverview({ tasks = [], project = null, members = [], membersLoading = false, onManageMembers }) {
   const [chartView, setChartView] = useState("status") // "status" | "priority"
 
   const total = tasks.length
@@ -251,7 +268,11 @@ export function ProjectOverview({ tasks = [] }) {
             </div>
 
             <p className="text-xs font-medium text-muted-foreground pt-1">
-              Project is tracking well. Estimated completion: Aug 31, 2026.
+              {completionPercentage >= 100
+                ? "All tasks completed."
+                : project?.planned_end_date
+                ? `Estimated completion: ${new Date(project.planned_end_date).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}.`
+                : "No planned end date set for this project."}
             </p>
           </Card>
 
@@ -292,6 +313,60 @@ export function ProjectOverview({ tasks = [] }) {
         </div>
 
       </div>
+
+      {/* Team Members Card */}
+      <Card className="border border-border/80 bg-card rounded-2xl p-6 shadow-xs space-y-4">
+        <div className="flex items-center justify-between gap-2 border-b border-border/50 pb-3">
+          <div className="flex items-center gap-2">
+            <Users className="h-4 w-4 text-blue-600" />
+            <h3 className="font-poppins text-sm font-semibold text-foreground">Team Members</h3>
+            <span className="text-xs font-bold text-blue-600 bg-blue-500/10 px-2 py-0.5 rounded-full">
+              {members.length}
+            </span>
+          </div>
+          {onManageMembers && (
+            <button
+              type="button"
+              onClick={onManageMembers}
+              className="inline-flex items-center gap-1.5 text-xs font-semibold text-blue-600 hover:text-blue-700 cursor-pointer"
+            >
+              <UserPlus className="h-3.5 w-3.5" /> Manage
+            </button>
+          )}
+        </div>
+
+        {membersLoading ? (
+          <div className="flex items-center justify-center py-6">
+            <div className="h-5 w-5 rounded-full border-2 border-blue-600 border-t-transparent animate-spin" />
+          </div>
+        ) : members.length === 0 ? (
+          <p className="text-xs text-muted-foreground text-center py-4">
+            No members added yet. Invite teammates to collaborate on this project.
+          </p>
+        ) : (
+          <div className="flex flex-wrap gap-2.5">
+            {members.map((m, idx) => {
+              const isMemberOwner = project?.created_by && String(m.user_id) === String(project.created_by)
+              return (
+                <div
+                  key={m.project_member_id}
+                  className="flex items-center gap-2 pl-1.5 pr-3 py-1.5 rounded-xl bg-muted/30 border border-border/50"
+                >
+                  <span className={`h-6 w-6 rounded-full text-white text-[10px] font-bold flex items-center justify-center shrink-0 ${AVATAR_COLORS[idx % AVATAR_COLORS.length]}`}>
+                    {getInitials(m.full_name)}
+                  </span>
+                  <span className="text-xs font-medium text-foreground">{m.full_name}</span>
+                  {isMemberOwner && (
+                    <span className="inline-flex items-center gap-0.5 text-[9px] font-bold uppercase tracking-wider text-amber-600">
+                      <Crown className="h-2.5 w-2.5" /> Owner
+                    </span>
+                  )}
+                </div>
+              )
+            })}
+          </div>
+        )}
+      </Card>
 
     </div>
   )

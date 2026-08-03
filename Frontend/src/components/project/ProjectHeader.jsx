@@ -10,10 +10,30 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar"
  * - Key badge (PRO) & Status pill (TODO) placed directly at the right side of the project title.
  * - Clean action buttons layout for Edit, Delete, and + Add Task.
  */
-export function ProjectHeader({ project, onDeleteProject, onEditProject, onAddTask }) {
+const AVATAR_COLORS = [
+  "bg-blue-600",
+  "bg-indigo-600",
+  "bg-violet-600",
+  "bg-emerald-600",
+  "bg-rose-600",
+  "bg-amber-600",
+]
+
+const getInitials = (name = "") =>
+  name
+    .trim()
+    .split(/\s+/)
+    .slice(0, 2)
+    .map((p) => p.charAt(0).toUpperCase())
+    .join("") || "?"
+
+export function ProjectHeader({ project, onDeleteProject, onEditProject, onAddTask, members = [], membersLoading = false, onManageMembers }) {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
 
   if (!project) return null
+
+  const visibleMembers = members.slice(0, 4)
+  const extraCount = members.length - visibleMembers.length
 
   const getStatusStyle = (status = "") => {
     const s = status.toLowerCase()
@@ -82,17 +102,37 @@ export function ProjectHeader({ project, onDeleteProject, onEditProject, onAddTa
         <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 shrink-0">
           
           {/* Team Initials Stack */}
-          <div className="flex items-center -space-x-2 shrink-0">
-            <div className="h-7 w-7 rounded-full bg-violet-600 text-white text-[10px] font-bold flex items-center justify-center ring-2 ring-background">
-              AR
-            </div>
-            <div className="h-7 w-7 rounded-full bg-indigo-600 text-white text-[10px] font-bold flex items-center justify-center ring-2 ring-background">
-              SC
-            </div>
-            <div className="flex h-7 w-7 items-center justify-center rounded-full bg-blue-500/10 border border-blue-500/20 text-[10px] font-bold text-blue-600 ring-2 ring-background">
-              +4
-            </div>
-          </div>
+          <button
+            type="button"
+            onClick={onManageMembers}
+            title="Manage project members"
+            className="flex items-center -space-x-2 shrink-0 cursor-pointer group"
+          >
+            {membersLoading ? (
+              <span className="h-7 w-7 rounded-full bg-muted/60 animate-pulse ring-2 ring-background" />
+            ) : visibleMembers.length === 0 ? (
+              <span className="text-[11px] text-muted-foreground italic px-1 group-hover:text-blue-600 transition-colors">
+                No members yet
+              </span>
+            ) : (
+              <>
+                {visibleMembers.map((m, idx) => (
+                  <div
+                    key={m.project_member_id}
+                    title={`${m.full_name}${project.created_by && String(m.user_id) === String(project.created_by) ? " (Owner)" : ""}`}
+                    className={`h-7 w-7 rounded-full text-white text-[10px] font-bold flex items-center justify-center ring-2 ring-background transition-transform group-hover:scale-105 ${AVATAR_COLORS[idx % AVATAR_COLORS.length]}`}
+                  >
+                    {getInitials(m.full_name)}
+                  </div>
+                ))}
+                {extraCount > 0 && (
+                  <div className="flex h-7 w-7 items-center justify-center rounded-full bg-blue-500/10 border border-blue-500/20 text-[10px] font-bold text-blue-600 ring-2 ring-background">
+                    +{extraCount}
+                  </div>
+                )}
+              </>
+            )}
+          </button>
 
           {/* Action Toolbar: + Add Task, Edit Project, Delete */}
           <div className="flex items-center gap-2">

@@ -30,6 +30,8 @@ export function ProjectDetails() {
 
   const [project, setProject] = useState(null)
   const [tasks, setTasks] = useState([])
+  const [members, setMembers] = useState([])
+  const [membersLoading, setMembersLoading] = useState(true)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
 
@@ -155,9 +157,24 @@ export function ProjectDetails() {
     }
   }, [currentId, formatTaskObj])
 
+  const loadMembers = useCallback(async () => {
+    if (!currentId) return
+    setMembersLoading(true)
+    try {
+      const res = await api.get(`/api/members/${currentId}`)
+      setMembers(Array.isArray(res.data) ? res.data : [])
+    } catch (err) {
+      console.warn("Failed to fetch project members:", err)
+      setMembers([])
+    } finally {
+      setMembersLoading(false)
+    }
+  }, [currentId])
+
   useEffect(() => {
     loadProjectAndTasks()
-  }, [loadProjectAndTasks])
+    loadMembers()
+  }, [loadProjectAndTasks, loadMembers])
 
   const handleUpdateTaskStatus = async (taskId, newStatus) => {
     setTasks((prev) =>
@@ -309,9 +326,12 @@ export function ProjectDetails() {
       <ProjectHeader
         project={project}
         tasksCount={tasks.length}
+        members={members}
+        membersLoading={membersLoading}
         onDeleteProject={handleDeleteProject}
         onEditProject={() => setShowEditProjectModal(true)}
         onAddTask={() => setShowCreateTaskModal(true)}
+        onManageMembers={() => setShowAddMemberModal(true)}
       />
 
       {/* Segmented Pill Tabs Bar */}
@@ -350,7 +370,7 @@ export function ProjectDetails() {
             className="h-9 px-3 text-xs font-semibold rounded-xl border-border/80 hover:bg-muted/60 gap-1.5 shadow-xs"
           >
             <UserPlus className="h-3.5 w-3.5 text-blue-600" />
-            <span>Add Member</span>
+            <span>Manage Members ({members.length})</span>
           </Button>
 
           <Button
@@ -367,7 +387,13 @@ export function ProjectDetails() {
       {/* Main Tab Contents */}
       <div className="w-full">
         {activeTab === "overview" && (
-          <ProjectOverview tasks={tasks} />
+          <ProjectOverview
+            tasks={tasks}
+            project={project}
+            members={members}
+            membersLoading={membersLoading}
+            onManageMembers={() => setShowAddMemberModal(true)}
+          />
         )}
 
         {activeTab === "board" && (
@@ -410,13 +436,14 @@ export function ProjectDetails() {
         />
       )}
 
-      {/* Add Member Modal */}
+      {/* Manage Members Modal */}
       {showAddMemberModal && (
         <AddMemberModal
           open={showAddMemberModal}
           onOpenChange={setShowAddMemberModal}
           projectId={project.id}
-          onMembersAdded={loadProjectAndTasks}
+          project={project}
+          onMembersAdded={loadMembers}
         />
       )}
     </div>
