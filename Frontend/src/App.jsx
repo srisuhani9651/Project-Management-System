@@ -119,6 +119,14 @@ function AppContent() {
           }
         />
         <Route
+          path="/projects/:projectId/:tab"
+          element={
+            <ProtectedRoute>
+              <AppLayout><ProjectDetails /></AppLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
           path="/tasks/:taskId"
           element={
             <ProtectedRoute>

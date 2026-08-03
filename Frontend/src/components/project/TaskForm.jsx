@@ -42,7 +42,9 @@ export function TaskForm({
   })
 
   const [availableProjects, setAvailableProjects] = useState([])
+  const [projectMembers, setProjectMembers] = useState([])
   const [lovsLoading, setLovsLoading] = useState(true)
+  const [membersLoading, setMembersLoading] = useState(false)
 
   const [formData, setFormData] = useState({
     project_id: isUUID(projectId) ? projectId : isUUID(initialValues?.project_id) ? initialValues.project_id : "",
@@ -57,6 +59,48 @@ export function TaskForm({
   })
 
   const [errors, setErrors] = useState({})
+
+  // Fetch project members for the selected project_id
+  useEffect(() => {
+    async function fetchProjectMembers() {
+      if (!formData.project_id || !isUUID(formData.project_id)) {
+        setProjectMembers([])
+        return
+      }
+      setMembersLoading(true)
+      try {
+        const res = await api.get(`/api/members/${formData.project_id}`)
+        if (Array.isArray(res.data)) {
+          const membersList = res.data.map((m) => ({
+            id: m.user_id,
+            value: m.user_id,
+            name: m.full_name,
+            label: m.full_name,
+          }))
+          setProjectMembers(membersList)
+
+          setFormData((prev) => {
+            let selectedAssignee = prev.assignee_id
+            const isValid = membersList.some((opt) => String(opt.id) === String(selectedAssignee))
+            if (!isValid) {
+              if (membersList.length > 0) {
+                selectedAssignee = membersList[0].id
+              } else if (isUUID(currentUserId)) {
+                selectedAssignee = currentUserId
+              }
+            }
+            return { ...prev, assignee_id: selectedAssignee }
+          })
+        }
+      } catch (err) {
+        console.warn("Failed to fetch project members for TaskForm:", err)
+      } finally {
+        setMembersLoading(false)
+      }
+    }
+
+    fetchProjectMembers()
+  }, [formData.project_id, currentUserId])
 
   useEffect(() => {
     async function fetchLOVsAndProjects() {
@@ -106,21 +150,9 @@ export function TaskForm({
             }
           }
 
-          let targetAssigneeId = prev.assignee_id
-          if (!isUUID(targetAssigneeId)) {
-            if (isUUID(user?.user_id)) {
-              targetAssigneeId = user.user_id
-            } else if (isUUID(user?.id)) {
-              targetAssigneeId = user.id
-            } else {
-              targetAssigneeId = ""
-            }
-          }
-
           return {
             ...prev,
             project_id: targetProjId,
-            assignee_id: targetAssigneeId,
             status_id: prev.status_id || helperGetId(dbStatuses[0]) || "",
             priority_id: prev.priority_id || helperGetId(dbPriorities[0]) || "",
             task_type_id: prev.task_type_id || helperGetId(dbTaskTypes[0]) || "",
@@ -188,7 +220,11 @@ export function TaskForm({
     onSubmit(payload)
   }
 
-  const assigneeInitials = currentUserName
+  const creatorNameDisplay = initialValues
+    ? initialValues.creator_name || initialValues.created_by_name || currentUserName
+    : currentUserName
+
+  const creatorInitials = (creatorNameDisplay || "User")
     .split(" ")
     .map((n) => n[0])
     .join("")
@@ -251,7 +287,7 @@ export function TaskForm({
           <span className="font-poppins text-xs font-semibold text-foreground tracking-wide text-muted-foreground uppercase">
             Task Configuration
           </span>
-          {lovsLoading && <Loader2 className="h-3.5 w-3.5 animate-spin text-blue-600" />}
+          {(lovsLoading || membersLoading) && <Loader2 className="h-3.5 w-3.5 animate-spin text-blue-600" />}
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
@@ -321,22 +357,35 @@ export function TaskForm({
             {errors.task_type_id && <p className="text-[11px] text-rose-500 font-medium">{errors.task_type_id}</p>}
           </div>
 
-          {/* Assignee */}
+          {/* Assignee (Creator/Owner) */}
           <div className="space-y-1">
-            <Label className="text-xs font-semibold text-foreground">
-              Assignee <span className="text-blue-600 font-bold">*</span>
+            <Label className="text-xs font-semibold text-foreground flex items-center justify-between">
+              <span>Assignee (Creator)</span>
+              <span className="text-[10px] text-muted-foreground font-normal">Owner</span>
             </Label>
-            <div
-              className={`flex h-9.5 w-full items-center gap-2.5 rounded-xl border bg-muted/20 px-3 text-xs font-medium text-foreground ${
-                errors.assignee_id ? "border-rose-500" : "border-border/70"
-              }`}
-            >
+            <div className="flex h-9.5 w-full items-center gap-2.5 rounded-xl border border-border/70 bg-muted/20 px-3 text-xs font-medium text-foreground">
               <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-blue-600 text-[9px] font-bold text-white leading-none">
-                {assigneeInitials}
+                {creatorInitials}
               </div>
-              <span className="flex-1 truncate">{currentUserName}</span>
+              <span className="flex-1 truncate">{creatorNameDisplay}</span>
               <User className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
             </div>
+          </div>
+
+          {/* Assigned To (Project Member Dropdown) */}
+          <div className="space-y-1">
+            <Label className="text-xs font-semibold text-foreground">
+              Assigned To <span className="text-blue-600 font-bold">*</span>
+            </Label>
+            <CustomSelect
+              options={projectMembers}
+              value={formData.assignee_id}
+              onChange={(e) => handleCustomSelectChange("assignee_id", e.target.value)}
+              placeholder={membersLoading ? "Loading members..." : "Select Assigned Member"}
+              disabled={isLoading || lovsLoading || membersLoading}
+              error={!!errors.assignee_id}
+            />
+            {errors.assignee_id && <p className="text-[11px] text-rose-500 font-medium">{errors.assignee_id}</p>}
           </div>
         </div>
       </div>

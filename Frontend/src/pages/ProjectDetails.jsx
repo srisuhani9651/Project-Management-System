@@ -9,17 +9,27 @@ import { BoardView } from "@/components/project/BoardView"
 import { TaskTable } from "@/components/project/TaskTable"
 import { CreateTaskModal } from "@/components/project/CreateTaskModal"
 import { EditProjectModal } from "@/components/project/EditProjectModal"
+import { AddMemberModal } from "@/components/project/AddMemberModal"
+import { UserPlus } from "lucide-react"
 
 /**
  * Modern ProjectDetails Page Component
  * Segmented pill tabs UI & streamlined header.
  */
 export function ProjectDetails() {
-  const { projectId, id } = useParams()
+  const { projectId, id, tab } = useParams()
   const navigate = useNavigate()
-  const { projects, setProjects, fetchProjects } = useProject()
+  const { projects, setProjects, fetchProjects, user } = useProject()
 
   const currentId = projectId || id
+  const validTabs = ["overview", "board", "tasks"]
+  const activeTab = tab && validTabs.includes(tab.toLowerCase()) ? tab.toLowerCase() : "overview"
+
+  const handleTabChange = (newTab) => {
+    if (newTab !== activeTab && currentId) {
+      navigate(`/projects/${currentId}/${newTab}`)
+    }
+  }
 
   const project =
     projects.find((p) => p.id === currentId || p.key === currentId) ||
@@ -44,7 +54,12 @@ export function ProjectDetails() {
     dueDate: t.due_date
       ? new Date(t.due_date).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
       : t.dueDate || "No due date",
+    assignee_id: t.assignee_id,
     assignee: t.assignee_name || t.assignee || "Unassigned",
+    assigned_to: t.assignee_name || t.assignee || "Unassigned",
+    created_by: t.created_by,
+    creator_name: t.creator_name || t.created_by_name || "Owner",
+    project_id: t.project_id || project.id,
     projectKey: project.key,
   })
 
@@ -52,16 +67,13 @@ export function ProjectDetails() {
 
   const fetchProjectTasks = async () => {
     try {
-      let res
-      if (project?.id && !project.id.startsWith("proj-")) {
-        res = await api.get("/tasks", { params: { project_id: project.id } })
-      } else {
-        res = await api.get("/tasks")
+      const targetProjId = project?.id || currentId
+      const params = {}
+      if (targetProjId && !String(targetProjId).startsWith("proj-")) {
+        params.project_id = targetProjId
       }
-      if (Array.isArray(res.data)) {
-        const formatted = res.data.map(formatTaskObj)
-        setTasks(formatted)
-      }
+      const res = await api.get("/tasks", { params })
+      if (Array.isArray(res.data)) setTasks(res.data.map(formatTaskObj))
     } catch (err) {
       console.warn("Failed to fetch project tasks from backend:", err)
     }
@@ -69,10 +81,11 @@ export function ProjectDetails() {
 
   useEffect(() => {
     fetchProjectTasks()
-  }, [project?.id])
+  }, [project?.id, currentId])
 
   const [showCreateTaskModal, setShowCreateTaskModal] = useState(false)
   const [showEditProjectModal, setShowEditProjectModal] = useState(false)
+  const [showAddMemberModal, setShowAddMemberModal] = useState(false)
 
   const handleDeleteProject = () => {
     if (setProjects) {
@@ -133,8 +146,18 @@ export function ProjectDetails() {
     }
   }
 
-  const handleDeleteTask = (taskId) => {
-    setTasks((prev) => prev.filter((t) => t.id !== taskId))
+  const handleDeleteTask = async (taskId) => {
+    try {
+      setTasks((prev) => prev.filter((t) => (t.id || t.task_id) !== taskId))
+      await api.delete(`/tasks/${taskId}`).catch(() => {
+        return api.delete(`/api/manage/task/${taskId}`)
+      })
+      await fetchProjectTasks()
+      if (fetchProjects) fetchProjects()
+    } catch (err) {
+      console.warn("Failed to delete task on backend:", err)
+      fetchProjectTasks()
+    }
   }
 
   return (
@@ -150,32 +173,45 @@ export function ProjectDetails() {
       />
 
       {/* Segmented Pill Tabs Navigation */}
-      <Tabs defaultValue="overview" className="space-y-6 font-roboto">
-        <TabsList className="bg-muted/40 p-1.5 rounded-2xl flex border border-border/60 w-full sm:w-auto max-w-md justify-between gap-1 shadow-xs">
-          <TabsTrigger
-            value="overview"
-            className="flex-1 rounded-xl px-4 py-2 font-poppins text-xs font-semibold text-muted-foreground data-[state=active]:bg-card data-[state=active]:text-blue-600 data-[state=active]:shadow-xs transition-all cursor-pointer"
-          >
-            Overview
-          </TabsTrigger>
+      <Tabs value={activeTab} onValueChange={handleTabChange} className="space-y-6 font-roboto">
+        {/* Tab Bar Row: Tabs on the left, Add Member on the right */}
+        <div className="flex items-center justify-between gap-3">
+          <TabsList className="bg-muted/40 p-1.5 rounded-2xl flex border border-border/60 w-full sm:w-auto max-w-md justify-between gap-1 shadow-xs">
+            <TabsTrigger
+              value="overview"
+              className="flex-1 rounded-xl px-4 py-2 font-poppins text-xs font-semibold text-muted-foreground data-[state=active]:bg-card data-[state=active]:text-blue-600 data-[state=active]:shadow-xs transition-all cursor-pointer"
+            >
+              Overview
+            </TabsTrigger>
 
-          <TabsTrigger
-            value="board"
-            className="flex-1 rounded-xl px-4 py-2 font-poppins text-xs font-semibold text-muted-foreground data-[state=active]:bg-card data-[state=active]:text-blue-600 data-[state=active]:shadow-xs transition-all cursor-pointer"
-          >
-            Board View
-          </TabsTrigger>
+            <TabsTrigger
+              value="board"
+              className="flex-1 rounded-xl px-4 py-2 font-poppins text-xs font-semibold text-muted-foreground data-[state=active]:bg-card data-[state=active]:text-blue-600 data-[state=active]:shadow-xs transition-all cursor-pointer"
+            >
+              Board View
+            </TabsTrigger>
 
-          <TabsTrigger
-            value="tasks"
-            className="flex-1 rounded-xl px-4 py-2 font-poppins text-xs font-semibold text-muted-foreground data-[state=active]:bg-card data-[state=active]:text-blue-600 data-[state=active]:shadow-xs transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+            <TabsTrigger
+              value="tasks"
+              className="flex-1 rounded-xl px-4 py-2 font-poppins text-xs font-semibold text-muted-foreground data-[state=active]:bg-card data-[state=active]:text-blue-600 data-[state=active]:shadow-xs transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+            >
+              <span>Tasks</span>
+              <span className="h-4 px-1.5 rounded-full bg-blue-500/10 text-[10px] font-poppins font-bold text-blue-600">
+                {tasks.length}
+              </span>
+            </TabsTrigger>
+          </TabsList>
+
+          {/* Add Member Button — right end of tab bar */}
+          <button
+            type="button"
+            onClick={() => setShowAddMemberModal(true)}
+            className="ml-auto flex items-center gap-2 px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white font-poppins text-xs font-semibold shadow-sm transition-all cursor-pointer shrink-0"
           >
-            <span>Tasks</span>
-            <span className="h-4 px-1.5 rounded-full bg-blue-500/10 text-[10px] font-poppins font-bold text-blue-600">
-              {tasks.length}
-            </span>
-          </TabsTrigger>
-        </TabsList>
+            <UserPlus className="h-3.5 w-3.5 stroke-[2.2]" />
+            Add Member
+          </button>
+        </div>
 
         {/* Tab 1: Overview */}
         <TabsContent value="overview" className="mt-0">
@@ -216,6 +252,13 @@ export function ProjectDetails() {
         open={showEditProjectModal}
         onOpenChange={setShowEditProjectModal}
         project={project}
+      />
+
+      {/* Add Member Modal */}
+      <AddMemberModal
+        open={showAddMemberModal}
+        onOpenChange={setShowAddMemberModal}
+        projectId={project.id}
       />
     </div>
   )

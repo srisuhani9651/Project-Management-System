@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from "react"
+import { useNavigate } from "react-router-dom"
 import { useProject } from "@/context/ProjectContext"
 import api from "@/services/api"
+import { FolderPlus } from "lucide-react"
 
 // Modern Dashboard Subcomponents
 import { ProjectTaskPieChart } from "@/components/dashboard/ProjectTaskPieChart"
@@ -14,8 +16,10 @@ import { RecentTasksList } from "@/components/dashboard/RecentTasksList"
  */
 export function Dashboard() {
   const { user, fetchProjects } = useProject()
+  const navigate = useNavigate()
   const [telemetry, setTelemetry] = useState(null)
   const [loading, setLoading] = useState(true)
+  const [isEmpty, setIsEmpty] = useState(false)
 
   // Dynamic Greeting based on current hour
   const getGreeting = () => {
@@ -32,18 +36,24 @@ export function Dashboard() {
     try {
       setLoading(true)
       const res = await api.get("/api/dashboard")
-      if (res.data) {
-        setTelemetry(res.data)
-      }
+      const data = res.data
+      setTelemetry(data)
+      // Empty state: no tasks and no projects for this user
+      const noTasks = (data?.pendingTasks?.counts?.all ?? 0) === 0
+      const noProjects = (data?.taskDistribution?.totalProjects ?? 0) === 0
+      setIsEmpty(noTasks && noProjects)
     } catch (err) {
       console.warn("Could not fetch /api/dashboard, trying fallback /dashboard:", err)
       try {
         const fallbackRes = await api.get("/dashboard")
-        if (fallbackRes.data) {
-          setTelemetry(fallbackRes.data)
-        }
+        const data = fallbackRes.data
+        setTelemetry(data)
+        const noTasks = (data?.pendingTasks?.counts?.all ?? 0) === 0
+        const noProjects = (data?.taskDistribution?.totalProjects ?? 0) === 0
+        setIsEmpty(noTasks && noProjects)
       } catch (fallbackErr) {
         console.error("Dashboard API error:", fallbackErr)
+        setIsEmpty(true)
       }
     } finally {
       setLoading(false)
@@ -117,65 +127,80 @@ export function Dashboard() {
   return (
     <div className="flex-1 pb-16 pt-6 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto w-full space-y-8 animate-fade-in font-roboto">
 
-      {/* 1. Clean Header Greeting */}
+      {/* Header Greeting */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-border/50 pb-5">
         <div className="space-y-1">
           <h1 className="font-poppins text-xl sm:text-2xl font-bold tracking-tight text-foreground flex items-center gap-2">
             {getGreeting()}, {userName} <span className="text-xl">👋</span>
           </h1>
-          <p className="font-roboto text-xs sm:text-sm text-muted-foreground flex items-center gap-2">
-            <span>Here is your current pending tasks, analytics, and productivity telemetry.</span>
+          <p className="font-roboto text-xs sm:text-sm text-muted-foreground">
+            Here is your current pending tasks, analytics, and productivity telemetry.
           </p>
         </div>
       </div>
 
-      {/* 2. SECTION 1: Pending Tasks List + Project Task Distribution Pie Chart */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
-
-        {/* Left Column (6 cols): Pending Tasks List */}
-        <div className="lg:col-span-6 flex">
-          <PendingTasksList
-            pendingData={telemetry?.pendingTasks}
-            onToggleTaskStatus={handleToggleTaskStatus}
-            title="Pending Tasks"
-            loading={loading}
-          />
+      {/* Empty State — No projects/tasks for this user */}
+      {!loading && isEmpty ? (
+        <div className="flex flex-col items-center justify-center py-24 text-center space-y-5">
+          <div className="h-16 w-16 rounded-2xl bg-blue-500/10 flex items-center justify-center">
+            <FolderPlus className="h-8 w-8 text-blue-600 stroke-[1.5]" />
+          </div>
+          <div className="space-y-1.5">
+            <h2 className="font-poppins text-lg font-bold text-foreground">No Projects Found</h2>
+            <p className="text-sm text-muted-foreground max-w-xs">
+              You haven't created any projects yet. Start by creating your first project.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => navigate("/projects/new")}
+            className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-poppins text-sm font-semibold transition-all shadow-sm cursor-pointer"
+          >
+            <FolderPlus className="h-4 w-4" />
+            Create New Project
+          </button>
         </div>
+      ) : (
+        <>
+          {/* SECTION 1: Pending Tasks + Task Distribution */}
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
+            <div className="lg:col-span-6 flex">
+              <PendingTasksList
+                pendingData={telemetry?.pendingTasks}
+                onToggleTaskStatus={handleToggleTaskStatus}
+                title="Pending Tasks"
+                loading={loading}
+              />
+            </div>
+            <div className="lg:col-span-6 flex">
+              <ProjectTaskPieChart
+                distributionData={telemetry?.taskDistribution}
+                title="Task Distribution by Project"
+                loading={loading}
+              />
+            </div>
+          </div>
 
-        {/* Right Column (6 cols): Project Task Distribution Pie Chart */}
-        <div className="lg:col-span-6 flex">
-          <ProjectTaskPieChart
-            distributionData={telemetry?.taskDistribution}
-            title="Task Distribution by Project"
-            loading={loading}
-          />
-        </div>
-
-      </div>
-
-      {/* 3. SECTION 2: Time-Based Past Analytics + Duration-Based Productivity Insights */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
-
-        {/* Left Column (6 cols): Time-Based Past Analytics */}
-        <div className="lg:col-span-6 flex">
-          <TimebasedAnalytics
-            analyticsData={telemetry?.timeAnalytics}
-            title="Past Time Analytics (Week / Month / Quarter)"
-            loading={loading}
-          />
-        </div>
-
-        {/* Right Column (6 cols): Recently Created / Updated Tasks */}
-        <div className="lg:col-span-6 flex">
-          <RecentTasksList
-            recentData={telemetry?.recentTasks}
-            recentTasks={telemetry?.recentTasks?.tasks}
-            title="Recent Tasks"
-            loading={loading}
-          />
-        </div>
-
-      </div>
+          {/* SECTION 2: Time Analytics + Recent Tasks */}
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
+            <div className="lg:col-span-6 flex">
+              <TimebasedAnalytics
+                analyticsData={telemetry?.timeAnalytics}
+                title="Past Time Analytics (Week / Month / Quarter)"
+                loading={loading}
+              />
+            </div>
+            <div className="lg:col-span-6 flex">
+              <RecentTasksList
+                recentData={telemetry?.recentTasks}
+                recentTasks={telemetry?.recentTasks?.tasks}
+                title="Recent Tasks"
+                loading={loading}
+              />
+            </div>
+          </div>
+        </>
+      )}
 
     </div>
   )

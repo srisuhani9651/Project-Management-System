@@ -1,16 +1,16 @@
 import React from "react"
 import { Badge } from "@/components/ui/badge"
 
-export function StatusBadge({ status }) {
-  const normalized = (status || "").toLowerCase()
+export function StatusBadge({ status, className = "" }) {
+  const normalized = (status || "").toLowerCase().trim()
 
   if (normalized === "completed" || normalized === "done") {
-    return <Badge variant="success">Done</Badge>
+    return <Badge variant="success" className={className}>Completed</Badge>
   }
   if (normalized === "in progress") {
-    return <Badge variant="info">In Progress</Badge>
+    return <Badge variant="info" className={className}>In Progress</Badge>
   }
-  return <Badge variant="secondary">To Do</Badge>
+  return <Badge variant="secondary" className={className}>Todo</Badge>
 }
 
 export default StatusBadge
