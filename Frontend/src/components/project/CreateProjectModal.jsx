@@ -40,7 +40,7 @@ export function CreateProjectModal({ open, onOpenChange, onProjectCreated }) {
             : Array.isArray(err.response.data.detail)
             ? err.response.data.detail[0]?.msg || "Failed to create project"
             : "Failed to create project"
-          : "Unable to connect to http://localhost:8000/projects API."
+          : "Unable to connect to backend projects API."
       setServerError(errorMsg)
     } finally {
       setIsLoading(false)

@@ -45,7 +45,7 @@ ProjectFlow's frontend is a React 19 + Vite single-page application that lets an
 - Run a global **search** across projects and tasks.
 - Have UI actions (edit/delete project, edit/delete/update task) gated by a lightweight, client-side **Policy-Based Access Control (PBAC)** layer that mirrors the rules enforced server-side.
 
-The app talks to the backend exclusively over a single REST API base URL (`VITE_API_URL`) using `axios`, with a JWT bearer token attached to every request.
+The app talks to the backend exclusively over a single REST API base URL (`VITE_API_BASE_URL`) using `axios`, with a JWT bearer token attached to every request.
 
 ---
 
@@ -202,7 +202,7 @@ cp .env.example .env
 npm run dev
 ```
 
-The app runs at `http://localhost:5173` by default (Vite's default port) and expects the backend to be reachable at whatever `VITE_API_URL` points to.
+The app runs at `http://localhost:5173` by default (Vite's default port) and expects the backend to be reachable at whatever `VITE_API_BASE_URL` points to.
 
 ---
 
@@ -212,9 +212,9 @@ All frontend configuration is done through Vite environment variables, which **m
 
 | Variable | Required | Default (if unset) | Description |
 | --- | --- | --- | --- |
-| `VITE_API_URL` | No (has a fallback) | `http://localhost:8000` | Base URL of the backend API. Every axios request in `src/services/api.js` is made relative to this. |
+| `VITE_API_BASE_URL` | No (has a fallback) | `http://localhost:8000` | Base URL of the backend API. Every axios request in `src/services/api.js` is made relative to this. |
 
-**Important:** Vite bakes `VITE_*` variables into the JS bundle **at build time**. If you deploy a static build (Vercel, Docker/Nginx), you must set `VITE_API_URL` correctly *before* running `npm run build` — changing it after the build requires a rebuild, since there is no runtime environment injection in this app.
+**Important:** Vite bakes `VITE_*` variables into the JS bundle **at build time**. If you deploy a static build (Vercel, Docker/Nginx), you must set `VITE_API_BASE_URL` correctly *before* running `npm run build` — changing it after the build requires a rebuild, since there is no runtime environment injection in this app.
 
 ---
 
@@ -297,7 +297,7 @@ All HTTP calls go through a single pre-configured axios instance in `src/service
 
 ```js
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || "http://localhost:8000",
+  baseURL: import.meta.env.VITE_API_BASE_URL || "http://localhost:8000",
   headers: { "Content-Type": "application/json" },
 });
 
@@ -444,7 +444,7 @@ npm run build      # outputs static assets to dist/
 npm run preview    # optional: serve dist/ locally to sanity-check the build
 ```
 
-Because `VITE_API_URL` is compiled into the bundle at build time, **set it correctly before running `npm run build`** for whichever backend the build should point at.
+Because `VITE_API_BASE_URL` is compiled into the bundle at build time, **set it correctly before running `npm run build`** for whichever backend the build should point at.
 
 ### Deployment target 1 — Vercel
 
@@ -454,17 +454,17 @@ Because `VITE_API_URL` is compiled into the bundle at build time, **set it corre
 { "rewrites": [{ "source": "/(.*)", "destination": "/index.html" }] }
 ```
 
-Set `VITE_API_URL` as a Vercel project environment variable, then deploy as a standard Vite/static site (build command `npm run build`, output directory `dist`).
+Set `VITE_API_BASE_URL` as a Vercel project environment variable, then deploy as a standard Vite/static site (build command `npm run build`, output directory `dist`).
 
 ### Deployment target 2 — Docker / Nginx
 
 The included `Dockerfile` is a two-stage build:
 
-1. **Builder stage** (`node:20-alpine`) — `npm ci`, accepts `VITE_API_URL` as a build `ARG`/`ENV`, then `npm run build`.
+1. **Builder stage** (`node:20-alpine`) — `npm ci`, accepts `VITE_API_BASE_URL` as a build `ARG`/`ENV`, then `npm run build`.
 2. **Serve stage** (`nginx:alpine`) — copies `dist/` into `/usr/share/nginx/html` and `nginx.conf` (SPA fallback: `try_files $uri $uri/ /index.html;`) into the Nginx config, exposing port 80.
 
 ```bash
-docker build --build-arg VITE_API_URL=https://api.example.com -t projectflow-frontend .
+docker build --build-arg VITE_API_BASE_URL=https://api.example.com -t projectflow-frontend .
 docker run -p 8080:80 projectflow-frontend
 ```
 
@@ -474,7 +474,7 @@ docker run -p 8080:80 projectflow-frontend
 
 | Symptom | Likely cause / fix |
 | --- | --- |
-| App loads but every API call fails / redirects to `/login` immediately | `VITE_API_URL` isn't pointing at a reachable backend, or the backend's CORS policy is rejecting the frontend's origin. Confirm the backend is up and check the browser console/network tab. |
+| App loads but every API call fails / redirects to `/login` immediately | `VITE_API_BASE_URL` isn't pointing at a reachable backend, or the backend's CORS policy is rejecting the frontend's origin. Confirm the backend is up and check the browser console/network tab. |
 | Stuck in a login redirect loop | A stale/invalid `pf_token` in `localStorage` is triggering repeated `401`s. Clear `localStorage` (`pf_token`, `pf_user`, `pf_projects`) and log in again. |
 | Changing `.env` has no effect | Restart `npm run dev` — Vite only reads `VITE_*` vars at server/build start. For a deployed static build, you must rebuild (see [Build & Deployment](#build--deployment)). |
 | 404 on refreshing a deep link (e.g. `/projects/123`) in production | The SPA rewrite isn't configured on your host. Use the provided `vercel.json` for Vercel, or `nginx.conf` for a Docker/Nginx deployment. |

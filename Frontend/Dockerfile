@@ -8,8 +8,8 @@ RUN npm ci
 COPY . .
 
 # Baked into the static bundle at build time (Vite only exposes VITE_* vars)
-ARG VITE_API_URL
-ENV VITE_API_URL=$VITE_API_URL
+ARG VITE_API_BASE_URL
+ENV VITE_API_BASE_URL=$VITE_API_BASE_URL
 
 RUN npm run build
 

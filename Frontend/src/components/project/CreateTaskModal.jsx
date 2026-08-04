@@ -18,7 +18,7 @@ export function CreateTaskModal({ open, onOpenChange, onCreateTask, projectId, p
     setError("")
 
     try {
-      // POST http://localhost:8000/tasks
+      // POST /tasks
       const res = await api.post("/tasks", payload)
       const createdTask = res.data.task || res.data
 

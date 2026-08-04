@@ -29,7 +29,7 @@ export function CreateProject() {
 
       navigate("/projects")
     } catch (err) {
-      console.error("Error creating project via POST http://localhost:8000/projects:", err)
+      console.error("Error creating project via POST /projects:", err)
       const errorMsg =
         err.response?.data?.detail
           ? typeof err.response.data.detail === "string"

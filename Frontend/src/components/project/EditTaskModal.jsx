@@ -18,7 +18,7 @@ export function EditTaskModal({ open, onOpenChange, task, onSaveTask }) {
     setError("")
 
     try {
-      // POST http://localhost:8000/tasks/{task_id}
+      // POST /tasks/{task_id}
       const res = await api.post(`/tasks/${taskId}`, payload)
       const updatedTask = res.data.task || res.data
 
